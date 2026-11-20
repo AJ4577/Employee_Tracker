@@ -10,7 +10,8 @@ export const configError: string | null =
 
 // Session tokens are kept by supabase-js in localStorage (browser default). No passwords or
 // privileged keys are stored. The anon key is public by design; all access is enforced by RLS.
-export const supabase: SupabaseClient = createClient(url ?? "http://invalid.local", anon ?? "invalid", {
+// `||` (not `??`): CI passes unset repository variables as empty strings.
+export const supabase: SupabaseClient = createClient(url || "http://invalid.local", anon || "invalid", {
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
   realtime: { params: { eventsPerSecond: 5 } },
 });
