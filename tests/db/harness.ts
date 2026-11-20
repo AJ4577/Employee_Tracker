@@ -50,6 +50,7 @@ export interface Claims {
   sub?: string;
   aal?: "aal1" | "aal2";
   role?: string;
+  email?: string;
 }
 
 /** Run fn inside a transaction as the given JWT identity (role authenticated, or anon if no sub). */

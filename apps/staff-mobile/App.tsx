@@ -16,7 +16,7 @@ import { Banner, Button, C, s } from "./src/ui";
 type Tab = "today" | "visits" | "history" | "alerts" | "profile";
 
 function Main() {
-  const { session, ready, me, meError, offline, signOut } = useSession();
+  const { session, ready, me, meError, offline, signOut, refresh } = useSession();
   const [tab, setTab] = useState<Tab>("today");
   const [visitId, setVisitId] = useState<string | null>(null);
   const [pushMsg, setPushMsg] = useState<string | null>(null);
@@ -46,15 +46,16 @@ function Main() {
   if (!me)
     return (
       <View style={{ padding: 20 }}>
-        {meError ? <Banner kind="error">{meError}</Banner> : <Text>Loading…</Text>}
+        {meError ? <Banner kind="error">{meError.includes("not set up") ? "Registration isn't finished. Complete it on the web Register page, then sign in again." : meError}</Banner> : <Text>Loading…</Text>}
         {meError ? <Button title="Sign out" variant="secondary" onPress={signOut} /> : null}
       </View>
     );
   if (me.profile.status !== "active" || isAdminRole(me.profile.role))
     return (
       <View style={{ padding: 20 }}>
-        <Banner kind="error">{me.profile.status === "invited" ? "Finish setting up your account from the invitation email first." : me.profile.status === "suspended" ? "This account is suspended." : "This app is for field staff. Admins should use the web app."}</Banner>
+        <Banner kind="error">{me.profile.status === "invited" ? "Open the invitation email to activate your account first." : me.profile.status === "pending" ? "Your registration is waiting for admin approval. Try again after it's approved." : me.profile.status === "suspended" ? "This account is suspended." : "This app is for field staff. Admins should use the web app."}</Banner>
         <Button title="Sign out" variant="secondary" onPress={signOut} />
+        {me.profile.status === "pending" ? <Button title="Check again" onPress={refresh} style={{ marginTop: 8 }} /> : null}
       </View>
     );
 

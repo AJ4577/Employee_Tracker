@@ -6,9 +6,18 @@ Use **separate** Supabase projects for staging and production, each with its own
 
 1. Create a project (region close to users, e.g. Mumbai `ap-south-1`). For production choose a paid plan with
    daily backups (enable PITR if available) — the free tier is for development/pilot only.
-2. Auth → Providers: Email on; **disable sign-ups**. Auth → URL configuration: Site URL = your web URL; add redirect
-   URLs `https://<web>/accept-invite`, `https://<web>/reset-password`. Auth → MFA: enable TOTP.
-   Password policy ≥10 chars with upper/lower/digit. Configure custom SMTP (sender domain) for invitations.
+2. Auth settings (sign-in is passwordless OTP; self-registration needs admin approval):
+   * **Sign In / Providers → Email**: enabled, **Allow new users to sign up: ON**, Confirm email ON, OTP length 6,
+     OTP expiry 600 s.
+   * **Emails → Templates**: in *Magic Link* and *Confirm signup* include `{{ .Token }}` so users get a 6-digit code
+     (use `supabase/templates/otp.html`).
+   * **Phone** provider (optional, paid): enable and configure an SMS provider (Twilio / MessageBird / Textlocal / Vonage)
+     for "Sign in with mobile number". Without it the app tells users phone OTP isn't set up.
+   * **URL configuration**: Site URL = your web URL (e.g. `https://aj4577.github.io/Employee_Tracker/`); redirect URL
+     `<web>/accept-invite` (admin invitations).
+   * **Multi-Factor**: enable TOTP (admins must add an authenticator app after OTP sign-in).
+   * Built-in email sending is heavily rate-limited — configure **custom SMTP** before real use.
+   * The **first person to register becomes the owner**. Register yourself immediately after deploying.
 3. Link and push the schema:
 
 ```bash
@@ -44,7 +53,8 @@ $$);
 
    (Requires `pg_net` extension enabled.) Reminders and retention cron jobs are created by the migration when `pg_cron` exists.
 
-6. Bootstrap the first organization and owner (from a trusted machine):
+6. Owner: simply register on the web app first (the first registration becomes the owner). Alternative for a
+   controlled setup — bootstrap the organization and owner from a trusted machine:
 
 ```bash
 SUPABASE_URL=https://<ref>.supabase.co SUPABASE_SERVICE_ROLE_KEY=<service key> APP_URL=https://app.example.com \

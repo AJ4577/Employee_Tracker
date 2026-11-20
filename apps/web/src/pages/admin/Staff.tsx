@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { fieldErrors, inviteInput, timeAgo, type Profile, type StaffBoardRow } from "@kisanroute/shared";
+import { fieldErrors, formatInTz, inviteInput, timeAgo, type Profile, type StaffBoardRow } from "@kisanroute/shared";
 import { callFunction, rpc, ApiError } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 import { useStaffList } from "../../lib/data";
@@ -23,10 +23,12 @@ export default function Staff() {
     onError: (e: ApiError) => toast("error", e.message),
   });
   const stats = new Map((board.data ?? []).map((b) => [b.id, b]));
+  const pending = (list.data ?? []).filter((p) => p.status === "pending");
 
   return (
     <>
       <PageHeader title="Staff" actions={<Button onClick={() => setInviting(true)}>+ Invite</Button>} />
+      {pending.length ? <PendingRegistrations rows={pending} /> : null}
       {list.isLoading ? <Loading /> : list.error ? <ErrorState error={list.error} onRetry={() => list.refetch()} /> : !list.data?.length ? <Empty title="No team members yet" /> : (
         <div className="table-wrap">
           <table className="table cards-on-mobile">
@@ -47,7 +49,7 @@ export default function Staff() {
                     <td className="row">
                       {!self ? <Button variant="secondary" className="btn-sm" onClick={() => setEditing(p)}>Edit</Button> : null}
                       {p.status === "invited" ? <Button variant="ghost" className="btn-sm" busy={resend.isPending} onClick={() => resend.mutate(p)}>Resend invite</Button> : null}
-                      {!self && p.role !== "owner" && p.status !== "invited" ? (
+                      {!self && p.role !== "owner" && p.status !== "invited" && p.status !== "pending" ? (
                         <Button variant={p.status === "active" ? "danger" : "secondary"} className="btn-sm" onClick={() => setStatusFor(p)}>{p.status === "active" ? "Suspend" : "Reactivate"}</Button>
                       ) : null}
                       {p.role === "staff" && p.status === "active" ? <Link className="btn btn-ghost btn-sm" to={`/admin/tracking?staff=${p.id}`}>Map</Link> : null}
@@ -63,6 +65,50 @@ export default function Staff() {
       {editing ? <EditStaff p={editing} staff={list.data ?? []} onClose={() => setEditing(null)} /> : null}
       {statusFor ? <StatusModal p={statusFor} onClose={() => setStatusFor(null)} /> : null}
     </>
+  );
+}
+
+function PendingRegistrations({ rows }: { rows: Profile[] }) {
+  const { me, tz } = useAuth();
+  const toast = useToast();
+  const qc = useQueryClient();
+  const [roles, setRoles] = useState<Record<string, string>>({});
+  const review = useMutation({
+    mutationFn: ({ id, approve, role }: { id: string; approve: boolean; role?: string }) =>
+      rpc("admin_review_registration", { p_profile: id, p_approve: approve, p_role: role ?? null, p_reason: approve ? null : "Rejected by admin" }),
+    onSuccess: (_r, v) => {
+      qc.invalidateQueries({ queryKey: ["staff-list"] });
+      qc.invalidateQueries({ queryKey: ["staff-board"] });
+      toast("ok", v.approve ? "Approved. They can sign in now." : "Registration rejected.");
+    },
+    onError: (e: ApiError) => toast("error", e.message),
+  });
+  const owner = me?.profile.role === "owner";
+  return (
+    <section className="card">
+      <div className="card-head"><h2>Pending registrations ({rows.length})</h2></div>
+      <ul className="list">
+        {rows.map((p) => {
+          const role = roles[p.id] ?? (p.role === "admin" && !owner ? "staff" : p.role);
+          return (
+            <li key={p.id} className="list-item">
+              <div>
+                <strong>{p.display_name}</strong> <span className="badge st-invited">requested {p.role}</span>
+                <div className="small muted">{p.email} · {p.phone ?? "no phone"} · registered {formatInTz(p.created_at, tz)}</div>
+              </div>
+              <div className="row">
+                <Select label="Approve as" value={role} onChange={(e) => setRoles({ ...roles, [p.id]: e.target.value })}>
+                  <option value="staff">Field staff</option>
+                  {owner ? <option value="admin">Admin</option> : null}
+                </Select>
+                <Button className="btn-sm" busy={review.isPending} onClick={() => review.mutate({ id: p.id, approve: true, role })}>Approve</Button>
+                <Button variant="danger" className="btn-sm" busy={review.isPending} onClick={() => review.mutate({ id: p.id, approve: false })}>Reject</Button>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 

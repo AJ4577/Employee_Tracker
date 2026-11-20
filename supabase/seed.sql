@@ -1,6 +1,6 @@
 -- SYNTHETIC DEVELOPMENT DATA ONLY. Applied by `supabase db reset` on a LOCAL stack.
 -- Never run against production. All names, phones and coordinates are fictional.
--- Local login (password for every account below): KisanRoute-dev-1
+-- Local sign-in is by email OTP (codes appear in the local test inbox). Password set below is unused by the app.
 --   owner@example.test (owner) · amit.staff@example.test · neha.staff@example.test
 -- Admin MFA is disabled for the dev organization so you can log in immediately.
 

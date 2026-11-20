@@ -13,6 +13,7 @@ export const ERROR_TEXT: Record<string, string> = {
   tracking_disabled: "Location sharing is off for this duty (limited mode).",
   invitation_expired: "This invitation has expired. Ask your administrator for a new one.",
   invitation_not_found: "No pending invitation was found for this account.",
+  already_registered: "You're already registered. Please sign in.",
   rate_limited: "Too many requests. Please wait a moment.",
   provider_not_configured: "This feature needs a provider to be configured by your administrator.",
   network: "You appear to be offline. Changes will be retried.",

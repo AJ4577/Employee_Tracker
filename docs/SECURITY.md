@@ -27,6 +27,15 @@ Notes:
 * `visit_events`, `audit_log`, `session_events`, `purchase_items` are append-only (update/delete raise `append_only`).
 * Audit diffs strip phone, alternate contact and address.
 
+## Accounts
+
+Self-registration is open (OTP-verified email; phone verified by SMS when enabled) but grants **no access**: new
+accounts are `pending`, and every policy/RPC requires `active`. Only the first registrant (empty database) becomes
+owner — serialized with an advisory lock. Admin approvals are owner-only; registrants can't request `owner`.
+Sign-in never creates accounts (`shouldCreateUser: false`). Phone numbers are unique per account.
+Risk to monitor: anyone can create a pending account (spam); Supabase Auth rate limits + CAPTCHA (Auth → Bot
+protection) are recommended for a public URL.
+
 ## Threat model summary
 
 | Threat | Control |

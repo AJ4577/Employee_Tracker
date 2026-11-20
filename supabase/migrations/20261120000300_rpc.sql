@@ -836,7 +836,7 @@ begin
       left join public.duty_sessions d on d.staff_id = p.id and d.ended_at is null
       left join public.latest_staff_position l on l.staff_id = p.id
       left join public.trips t on t.staff_id = p.id and t.status = 'active'
-     where p.organization_id = a.organization_id and p.role = 'staff' and p.status <> 'invited') x), '[]'::jsonb);
+     where p.organization_id = a.organization_id and p.role = 'staff' and p.status not in ('invited', 'pending')) x), '[]'::jsonb);
 end $$;
 
 create or replace function public.admin_activity_feed(p_from timestamptz, p_to timestamptz, p_staff uuid default null, p_limit integer default 100)

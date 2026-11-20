@@ -6,7 +6,9 @@ against a live Supabase project or on a physical phone yet.
 
 | Requirement | Implemented | Tested | Blocked on |
 |---|---|---|---|
-| Invite-only login, no public signup, invitation expiry, accept + set password | ✅ `invite-user`, `accept_invitation`, AcceptInvite page | ✅ DB logic (expiry/accept paths in SQL); ⛔ email flow not run | Supabase project + SMTP |
+| Register (name, email, phone, role) → email OTP → saved; first user = owner; others pending until approved | ✅ `register_profile`, `admin_review_registration`, Register/Pending pages, Staff approvals | ✅ 6 DB tests; register form validation checked in browser; ⛔ live OTP email not run | Supabase project (+ SMTP for volume) |
+| Passwordless sign-in by email OTP or mobile OTP; unknown users told to register | ✅ web + mobile | ✅ typecheck/UI render; ⛔ live | Email: Supabase project. Phone: paid SMS provider |
+| Admin invitations (optional path) | ✅ `invite-user`, `accept_invitation` | ✅ DB logic | Supabase project + SMTP |
 | Admin MFA (TOTP) enforced in DB (aal2) | ✅ `private.is_admin()`, MFA page | ✅ DB tests (aal1 denied, org-off allowed) | Supabase Auth live test |
 | Password reset, logout, session events | ✅ | ⛔ live | Supabase project |
 | Suspension revokes access + sessions | ✅ RPC + `admin-staff` ban | ✅ DB tests (data/RPC denied); ⛔ ban live | Supabase project |

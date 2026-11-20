@@ -4,7 +4,8 @@ import { isAdminRole } from "@kisanroute/shared";
 import { useAuth } from "./lib/auth";
 import { AppLayout, ADMIN_NAV, STAFF_NAV } from "./ui/Layout";
 import { Banner, Button, Loading } from "./ui/ui";
-import { AcceptInvitePage, LoginPage, MfaPage, ResetPasswordPage } from "./pages/auth/AuthPages";
+import { AcceptInvitePage, LoginPage, MfaPage, PendingApprovalPage, RegisterPage } from "./pages/auth/AuthPages";
+import { ApiError } from "./lib/api";
 import { NotificationsPage } from "./pages/Notifications";
 
 const Overview = lazy(() => import("./pages/admin/Overview"));
@@ -27,6 +28,8 @@ function Gate({ need, children }: { need: "admin" | "staff"; children: ReactNode
   const { session, loading, me, meError, needsMfa, signOut } = useAuth();
   if (loading) return <Loading label="Signing you in…" />;
   if (!session) return <Navigate to="/login" replace />;
+  // Email verified but registration form not finished yet.
+  if (meError instanceof ApiError && meError.code === "no_profile") return <Navigate to="/register" replace />;
   if (meError || !me)
     return (
       <main className="auth-shell">
@@ -39,6 +42,7 @@ function Gate({ need, children }: { need: "admin" | "staff"; children: ReactNode
       </main>
     );
   if (me.profile.status === "invited") return <Navigate to="/accept-invite" replace />;
+  if (me.profile.status === "pending") return <PendingApprovalPage />;
   if (me.profile.status !== "active")
     return (
       <main className="auth-shell">
@@ -58,9 +62,11 @@ function Gate({ need, children }: { need: "admin" | "staff"; children: ReactNode
 }
 
 function Home() {
-  const { session, loading, me, needsMfa } = useAuth();
+  const { session, loading, me, meError, needsMfa } = useAuth();
   if (loading) return <Loading />;
   if (!session) return <Navigate to="/login" replace />;
+  if (meError instanceof ApiError && meError.code === "no_profile") return <Navigate to="/register" replace />;
+  if (me?.profile.status === "pending") return <PendingApprovalPage />;
   if (needsMfa) return <Navigate to="/mfa" replace />;
   return <Navigate to={me && isAdminRole(me.profile.role) ? "/admin" : "/staff"} replace />;
 }
@@ -72,7 +78,7 @@ export function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/accept-invite" element={<AcceptInvitePage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/register" element={<RegisterPage />} />
         <Route path="/mfa" element={<MfaPage />} />
         <Route
           path="/admin"

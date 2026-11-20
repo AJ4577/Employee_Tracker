@@ -178,7 +178,7 @@ input[type="checkbox"] { width: 20px; height: 20px; min-height: 0; accent-color:
 .fresh-last_known { background: #f1f1f1; color: #444; }
 .fresh-unavailable { background: #f1f1f1; color: #666; border: 1px dashed #aaa; }
 .st-active { background: var(--green-100); color: var(--green-900); }
-.st-invited { background: var(--info-bg); color: var(--info); }
+.st-invited, .st-pending { background: var(--info-bg); color: var(--info); }
 .st-suspended { background: var(--danger-bg); color: var(--danger); }
 .prio { text-transform: capitalize; font-size: 0.85rem; }
 .prio-high { color: var(--warn); font-weight: 700; }

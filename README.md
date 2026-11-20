@@ -33,7 +33,17 @@ cp apps/web/.env.example apps/web/.env.local   # paste the local API URL + anon 
 npm run dev                   # http://localhost:5173
 ```
 
-Dev logins (synthetic, local only): `owner@example.test`, `amit.staff@example.test`, `neha.staff@example.test`, password `KisanRoute-dev-1`.
+Dev accounts (synthetic, local only): `owner@example.test`, `amit.staff@example.test`, `neha.staff@example.test` —
+sign in with email OTP; the local stack shows the code in its test mail inbox (Inbucket/Mailpit, see `supabase start` output).
+
+## Accounts: register → approval → OTP sign-in
+
+1. **Register** (web `/register`): full name, email, mobile number, role (Staff or Admin) → 6-digit email OTP → saved.
+   Optionally verify the mobile number by SMS to enable phone sign-in.
+2. The **first registration becomes the owner** (active immediately). Every later registration is **pending** until
+   approved on *Staff → Pending registrations* (admins approve staff; only the owner approves admins).
+3. **Sign in** with email OTP or mobile-number OTP (no passwords). Unknown email/phone → "Please register first".
+   Admins additionally confirm with an authenticator app (TOTP).
 
 ### Option B — Supabase staging project
 

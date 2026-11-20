@@ -6,7 +6,7 @@ create schema if not exists private;
 
 -- ---------------------------------------------------------------- enums
 create type public.app_role as enum ('owner', 'admin', 'staff');
-create type public.profile_status as enum ('invited', 'active', 'suspended');
+create type public.profile_status as enum ('invited', 'pending', 'active', 'suspended');
 create type public.visit_status as enum ('assigned', 'in_progress', 'arrived', 'completed', 'rescheduled', 'cancelled', 'blocked');
 create type public.task_type as enum ('meeting', 'follow_up', 'delivery', 'demo', 'other');
 create type public.priority as enum ('low', 'normal', 'high', 'urgent');
