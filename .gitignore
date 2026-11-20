@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.expo/
+*.log
+.env
+.env.*
+!.env.example
+coverage/
+supabase/.temp/
+supabase/.branches/
+apps/staff-mobile/android/
+apps/staff-mobile/ios/
+playwright-report/
+test-results/
+.claude/

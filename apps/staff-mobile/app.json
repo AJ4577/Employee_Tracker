@@ -1,0 +1,79 @@
+{
+  "expo": {
+    "name": "KisanRoute Staff",
+    "slug": "kisanroute-staff",
+    "scheme": "kisanroute",
+    "version": "1.0.0",
+    "orientation": "default",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1f6f3a"
+    },
+    "ios": {
+      "bundleIdentifier": "com.greenfieldagro.kisanroute.staff",
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "KisanRoute uses your location while you are on duty to record trips to farmer visits and confirm arrival.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "KisanRoute records your route only between Start duty and End duty, including when the phone is locked. Tracking stops when you end duty.",
+        "NSCameraUsageDescription": "Take a photo as proof of a visit or delivery.",
+        "NSPhotoLibraryUsageDescription": "Attach a photo as proof of a visit or delivery.",
+        "UIBackgroundModes": [
+          "location",
+          "remote-notification"
+        ]
+      }
+    },
+    "android": {
+      "package": "com.greenfieldagro.kisanroute.staff",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION",
+        "POST_NOTIFICATIONS",
+        "CAMERA"
+      ],
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "KisanRoute records your route only between Start duty and End duty, including when the phone is locked.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#1f6f3a"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Take a photo as proof of a visit or delivery."
+        }
+      ],
+      "expo-secure-store",
+      "expo-sqlite"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "REPLACE_WITH_EAS_PROJECT_ID"
+      }
+    }
+  }
+}

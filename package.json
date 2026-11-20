@@ -1,0 +1,26 @@
+{
+  "name": "kisanroute",
+  "private": true,
+  "version": "1.0.0",
+  "description": "KisanRoute field operations: admin web, staff web, staff mobile app, Supabase backend",
+  "workspaces": [
+    "packages/shared",
+    "apps/web",
+    "tests"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w apps/web",
+    "build": "npm run build -w apps/web",
+    "typecheck": "npm run typecheck -w packages/shared && npm run typecheck -w apps/web",
+    "test": "npm run test -w packages/shared && npm run test -w tests",
+    "test:db": "npm run test -w tests",
+    "bootstrap:org": "node scripts/bootstrap-org.mjs",
+    "check": "npm run typecheck && npm run test && npm run build"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@supabase/supabase-js": "2.119.2"
+  }
+}

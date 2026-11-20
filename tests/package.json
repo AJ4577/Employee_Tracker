@@ -1,0 +1,13 @@
+{
+  "name": "@kisanroute/tests",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.3.16",
+    "vitest": "3.2.7"
+  }
+}
