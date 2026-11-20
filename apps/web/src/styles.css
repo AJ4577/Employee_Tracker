@@ -210,6 +210,7 @@ input[type="checkbox"] { width: 20px; height: 20px; min-height: 0; accent-color:
 /* ---------- auth */
 .auth-shell { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; background: linear-gradient(160deg, var(--green-100), var(--bg)); }
 .auth-card { background: #fff; border-radius: 16px; padding: 24px; width: 100%; max-width: 420px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 12px; }
+.back-link { align-self: flex-start; padding: 4px 0; text-decoration: none; font-weight: 600; }
 .qr { align-self: center; border: 1px solid var(--line); border-radius: 8px; }
 
 /* ---------- staff visit */

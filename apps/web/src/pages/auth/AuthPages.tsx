@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { normalizePhone } from "@kisanroute/shared";
 import { supabase } from "../../lib/supabase";
@@ -6,11 +6,16 @@ import { useAuth } from "../../lib/auth";
 import { callFunction, rpc, ApiError } from "../../lib/api";
 import { Banner, Button, Select, TextInput } from "../../ui/ui";
 
-function AuthShell({ title, children }: { title: string; children: ReactNode }) {
+function AuthShell({ title, children, onBack, backLabel = "Back" }: { title: string; children: ReactNode; onBack?: () => void; backLabel?: string }) {
   const { settings } = useAuth();
   return (
     <main className="auth-shell">
       <div className="auth-card">
+        {onBack ? (
+          <button type="button" className="link back-link" onClick={onBack}>
+            ← {backLabel}
+          </button>
+        ) : null}
         <div className="brand brand-lg">
           <img src={`${import.meta.env.BASE_URL}favicon.svg`} alt="" width={36} height={36} />
           <span>{settings.app_name || "KisanRoute"}</span>
@@ -106,7 +111,7 @@ export function LoginPage() {
   };
 
   return (
-    <AuthShell title="Sign in">
+    <AuthShell title="Sign in" onBack={sentTo ? () => { setSentTo(null); setErr(null); } : undefined}>
       {err ? (
         <Banner kind="error">
           {err} {noAccount ? <Link to="/register">Register now →</Link> : null}
@@ -276,7 +281,11 @@ export function RegisterPage() {
   };
 
   return (
-    <AuthShell title={step === "done" || step === "phone" || step === "phone-otp" ? "Registration complete" : "Register"}>
+    <AuthShell
+      title={step === "done" || step === "phone" || step === "phone-otp" ? "Registration complete" : "Register"}
+      onBack={step === "otp" ? () => { setStep("form"); setErr(null); } : step === "form" && !finishingOnly ? () => nav("/login") : undefined}
+      backLabel={step === "otp" ? "Back" : "Back to sign in"}
+    >
       {err ? <Banner kind="error">{err}</Banner> : null}
 
       {step === "form" ? (
@@ -327,7 +336,7 @@ export function PendingApprovalPage() {
   const { me, signOut, refreshMe } = useAuth();
   const [busy, setBusy] = useState(false);
   return (
-    <AuthShell title="Waiting for approval">
+    <AuthShell title="Waiting for approval" onBack={() => signOut()} backLabel="Back to sign in">
       <Banner kind="info">
         Hi {me?.profile.display_name}, your {me?.profile.role === "admin" ? "admin" : "staff"} registration has been received. An {me?.profile.role === "admin" ? "owner" : "admin"} must approve it before you can use the app.
       </Banner>
@@ -369,7 +378,8 @@ export function AcceptInvitePage() {
 
 /** TOTP MFA: enroll on first admin login, then challenge on every new session. */
 export function MfaPage() {
-  const { refreshMe, signOut } = useAuth();
+  const { refreshMe, signOut, needsMfa, session } = useAuth();
+  const started = useRef(false);
   const nav = useNavigate();
   const [factorId, setFactorId] = useState<string | null>(null);
   const [qr, setQr] = useState<string | null>(null);
@@ -380,6 +390,9 @@ export function MfaPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Enroll exactly once per page visit; a second enrollment would invalidate the QR already shown.
+    if (started.current || !needsMfa) return;
+    started.current = true;
     (async () => {
       const { data, error } = await supabase.auth.mfa.listFactors();
       if (error) {
@@ -401,7 +414,11 @@ export function MfaPage() {
       }
       setLoading(false);
     })();
-  }, []);
+  }, [needsMfa]);
+
+  // MFA not required (or already satisfied): nothing to do here.
+  if (!session) return <Navigate to="/login" replace />;
+  if (!needsMfa) return <Navigate to="/" replace />;
 
   const verify = async (e: FormEvent) => {
     e.preventDefault();
@@ -422,7 +439,7 @@ export function MfaPage() {
   };
 
   return (
-    <AuthShell title="Two-step verification">
+    <AuthShell title="Two-step verification" onBack={() => signOut()} backLabel="Back to sign in">
       {loading ? <p>Preparing…</p> : null}
       {qr ? (
         <div className="stack">
@@ -437,6 +454,7 @@ export function MfaPage() {
             <li>Enter the 6-digit code shown for <strong>KisanRoute</strong>.</li>
           </ol>
           <img src={qr} alt="Authenticator QR code" width={180} height={180} className="qr" />
+          <p className="small muted">Scan only this QR code. If you scanned an older KisanRoute code before, delete that entry in Google Authenticator first.</p>
           <p className="small muted">Can't scan? In Google Authenticator choose “Enter a setup key” and type: <code>{secret}</code></p>
         </div>
       ) : null}
