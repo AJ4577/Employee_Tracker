@@ -29,6 +29,7 @@ jobs:
           VITE_BASE: /${{ github.event.repository.name }}/
           # Public values (the anon key is meant for browsers; RLS enforces access).
           # Repository Variables of the same name override these defaults.
+          VITE_PHONE_OTP: ${{ vars.VITE_PHONE_OTP || 'false' }}
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL || 'https://wrduxamtdhfumhappuym.supabase.co' }}
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyZHV4YW10ZGhmdW1oYXBwdXltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUxNTYwNDQsImV4cCI6MjExMDczMjA0NH0._KsmQWkRzGHfTJUevcCNW3sa7XgUh9t4MbWd85q1I8M' }}
       - name: SPA fallback for deep links

@@ -5,6 +5,7 @@ import { supabase } from "../supabase";
 import { rpc } from "../api";
 import { Banner, Button, C, Field, Muted, s } from "../ui";
 
+const PHONE_OTP = process.env.EXPO_PUBLIC_PHONE_OTP === "true";
 const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL ?? "https://aj4577.github.io/Employee_Tracker/";
 
 function message(e: { message?: string } | null): string {
@@ -75,7 +76,7 @@ export function LoginScreen() {
             </>
           ) : (
             <>
-              <View style={{ flexDirection: "row", marginBottom: 12 }} accessibilityRole="tablist">{[tab("email", "Email"), tab("phone", "Mobile number")]}</View>
+              {PHONE_OTP ? <View style={{ flexDirection: "row", marginBottom: 12 }} accessibilityRole="tablist">{[tab("email", "Email"), tab("phone", "Mobile number")]}</View> : null}
               {method === "email" ? (
                 <Field label="Email" autoCapitalize="none" autoComplete="email" keyboardType="email-address" textContentType="emailAddress" value={value} onChangeText={setValue} onSubmitEditing={send} />
               ) : (

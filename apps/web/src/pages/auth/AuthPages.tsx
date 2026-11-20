@@ -24,6 +24,9 @@ function AuthShell({ title, children }: { title: string; children: ReactNode }) 
 
 const device = () => navigator.userAgent.slice(0, 120);
 
+/** Phone OTP needs an SMS provider in Supabase Auth. Set VITE_PHONE_OTP=true once one is configured. */
+const PHONE_OTP = import.meta.env.VITE_PHONE_OTP === "true";
+
 /** Map Supabase Auth errors to clear, non-revealing messages. */
 function authMessage(e: unknown, ctx: "login" | "register" | "phone"): string {
   const m = ((e as Error)?.message ?? "").toLowerCase();
@@ -113,10 +116,10 @@ export function LoginPage() {
         <OtpStep target={sentTo} busy={busy} onVerify={verify} onResend={send} onBack={() => setSentTo(null)} />
       ) : (
         <>
-          <div className="tabs" role="tablist">
+          {PHONE_OTP ? <div className="tabs" role="tablist">
             <button role="tab" type="button" aria-selected={method === "email"} className={method === "email" ? "active" : ""} onClick={() => { setMethod("email"); setErr(null); }}>Email</button>
             <button role="tab" type="button" aria-selected={method === "phone"} className={method === "phone" ? "active" : ""} onClick={() => { setMethod("phone"); setErr(null); }}>Mobile number</button>
-          </div>
+          </div> : null}
           <form className="stack" onSubmit={(e: FormEvent) => { e.preventDefault(); send(); }}>
             {method === "email" ? (
               <TextInput label="Email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
@@ -201,7 +204,7 @@ export function RegisterPage() {
     // One-time thank-you email from the app's own sender; registration never depends on it.
     callFunction("send-welcome", {}).catch(() => {});
     rpc("log_session_event", { p_event: "login", p_device: device() }).catch(() => {});
-    setStep("phone");
+    setStep(PHONE_OTP ? "phone" : "done");
   };
 
   const submitForm = async (e: FormEvent) => {
