@@ -1,5 +1,5 @@
 // Shared HTTP helpers for KisanRoute Edge Functions (Deno).
-import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2.119.2";
+import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2.119.0";
 
 const allowed = (Deno.env.get("ALLOWED_ORIGINS") ?? "").split(",").map((s) => s.trim()).filter(Boolean);
 
