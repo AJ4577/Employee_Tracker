@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup, Polyline, Circle, useMap, useMapEvents } from "react-leaflet";
 import L, { type LatLngExpression } from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -6,40 +6,10 @@ import { useAuth } from "../lib/auth";
 import { callFunction, ApiError } from "../lib/api";
 import { useDebounced } from "../lib/hooks";
 
-export interface MapMarker {
-  id: string;
-  lat: number;
-  lon: number;
-  label: string;
-  kind: "farmer" | "farmer-approx" | "staff-live" | "staff-stale" | "staff-last" | "search" | "me" | "pick";
-  accuracy_m?: number | null;
-  popup?: ReactNode;
-}
+import type { LocalSearchResult, MapMarker, MapProps } from "./types";
+import { GoogleMapView, hasGoogleMaps } from "./GoogleMapView";
 
-export interface LocalSearchResult {
-  id: string;
-  label: string;
-  sub?: string;
-  lat: number;
-  lon: number;
-}
-
-interface Props {
-  markers?: MapMarker[];
-  /**
-   * Actual GPS breadcrumbs only (accepted device points), as separate segments. Segments are
-   * never joined, so trips and offline gaps don't produce invented straight lines.
-   */
-  routes?: [number, number][][];
-  center?: [number, number] | null;
-  zoom?: number;
-  height?: number | string;
-  onPick?: (lat: number, lon: number) => void;
-  localSearch?: (q: string) => LocalSearchResult[];
-  searchable?: boolean;
-  title?: string;
-  legend?: ReactNode;
-}
+export type { LocalSearchResult, MapMarker, MapProps } from "./types";
 
 const DEFAULT_CENTER: [number, number] = [20.5937, 78.9629]; // India
 
@@ -52,7 +22,7 @@ const icon = (kind: MapMarker["kind"], label: string) =>
     popupAnchor: [0, -24],
   });
 
-function FitTo({ markers, routes, center, zoom }: Pick<Props, "markers" | "routes" | "center" | "zoom">) {
+function FitTo({ markers, routes, center, zoom }: Pick<MapProps, "markers" | "routes" | "center" | "zoom">) {
   const map = useMap();
   const key = useMemo(() => JSON.stringify([center, markers?.map((m) => [m.lat, m.lon]), routes?.map((r) => r.length)]), [center, markers, routes]);
   useEffect(() => {
@@ -90,7 +60,12 @@ function Resize({ dep }: { dep: unknown }) {
   return null;
 }
 
-export function MapView({ markers = [], routes, center, zoom, height = 360, onPick, localSearch, searchable = true, title = "Map", legend }: Props) {
+/** Google Maps when VITE_GOOGLE_MAPS_API_KEY is set; otherwise the configured tile provider via Leaflet. */
+export function MapView(props: MapProps) {
+  return hasGoogleMaps ? <GoogleMapView {...props} /> : <LeafletMapView {...props} />;
+}
+
+function LeafletMapView({ markers = [], routes, center, zoom, height = 360, onPick, localSearch, searchable = true, title = "Map", legend }: MapProps) {
   const { settings } = useAuth();
   const [full, setFull] = useState(false);
   const [searchPin, setSearchPin] = useState<LocalSearchResult | null>(null);

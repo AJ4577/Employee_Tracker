@@ -227,6 +227,8 @@ input[type="checkbox"] { width: 20px; height: 20px; min-height: 0; accent-color:
 .map-toolbar { position: absolute; top: 8px; left: 52px; right: 8px; z-index: 500; display: flex; gap: 8px; align-items: flex-start; justify-content: space-between; pointer-events: none; }
 .map-toolbar > * { pointer-events: auto; }
 .mapwrap-full .map-toolbar { top: calc(8px + env(safe-area-inset-top, 0px)); }
+.map-toolbar-google { left: 8px; }
+.map-info { color: var(--ink); font-size: 0.9rem; max-width: 240px; }
 .map-btn { min-height: 40px; padding: 0 12px; border-radius: 9px; border: 1px solid var(--line); background: #fff; font: inherit; font-weight: 600; cursor: pointer; box-shadow: var(--shadow); white-space: nowrap; }
 .map-search { position: relative; flex: 1; max-width: 360px; }
 .map-search input { min-height: 40px; box-shadow: var(--shadow); }

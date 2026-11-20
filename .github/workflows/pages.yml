@@ -30,6 +30,8 @@ jobs:
           # Public values (the anon key is meant for browsers; RLS enforces access).
           # Repository Variables of the same name override these defaults.
           VITE_PHONE_OTP: ${{ vars.VITE_PHONE_OTP || 'false' }}
+          # Google Maps JavaScript API key (browser key restricted to this site's URL). Empty = OpenStreetMap.
+          VITE_GOOGLE_MAPS_API_KEY: ${{ vars.VITE_GOOGLE_MAPS_API_KEY }}
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL || 'https://wrduxamtdhfumhappuym.supabase.co' }}
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyZHV4YW10ZGhmdW1oYXBwdXltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUxNTYwNDQsImV4cCI6MjExMDczMjA0NH0._KsmQWkRzGHfTJUevcCNW3sa7XgUh9t4MbWd85q1I8M' }}
       - name: SPA fallback for deep links

@@ -15,7 +15,34 @@ interface Props {
  * Leaflet inside a WebView (no Google Maps SDK key required). Shows the farmer pin and, if
  * known, the device position. Search inside the map only pans the view; it never changes the pin.
  */
-function html({ pin, me, tileUrl, attribution }: Props) {
+const GOOGLE_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
+// The browser key is restricted to the web app's URL, so the WebView document uses it as its origin.
+const BASE_URL = process.env.EXPO_PUBLIC_WEB_URL ?? "https://aj4577.github.io/Employee_Tracker/";
+
+/** Google Maps (roadmap/satellite, India region) when a key is configured. */
+function googleHtml({ pin, me }: Props) {
+  const data = JSON.stringify({ pin, me });
+  return `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>html,body,#m{margin:0;height:100%;}</style></head><body><div id="m"></div>
+<script>
+var d=${data.replace(/</g, "\\u003c")};
+function init(){
+  var map=new google.maps.Map(document.getElementById('m'),{center:{lat:20.59,lng:78.96},zoom:5,maxZoom:21,mapTypeControl:true,streetViewControl:false,fullscreenControl:false,gestureHandling:'greedy',clickableIcons:false});
+  var b=new google.maps.LatLngBounds(),n=0;
+  if(d.pin){var p={lat:d.pin.lat,lng:d.pin.lon};new google.maps.Marker({map:map,position:p,title:d.pin.label+(d.pin.approximate?' (approximate)':''),icon:{path:google.maps.SymbolPath.CIRCLE,scale:10,fillColor:d.pin.approximate?'#e0a100':'#1f6f3a',fillOpacity:1,strokeColor:'#fff',strokeWeight:3}});b.extend(p);n++;}
+  if(d.me){var m={lat:d.me.lat,lng:d.me.lon};new google.maps.Circle({map:map,center:m,radius:d.me.accuracy_m,strokeColor:'#1d6fd6',strokeWeight:1,fillColor:'#1d6fd6',fillOpacity:.1,clickable:false});new google.maps.Marker({map:map,position:m,title:'You',icon:{path:google.maps.SymbolPath.CIRCLE,scale:7,fillColor:'#1d6fd6',fillOpacity:1,strokeColor:'#fff',strokeWeight:2}});b.extend(m);n++;}
+  if(n>1)map.fitBounds(b,40);else if(n===1){map.setCenter(b.getCenter());map.setZoom(16);}
+}
+</script>
+<script async src="https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(GOOGLE_KEY)}&region=IN&language=en&callback=init"></script>
+</body></html>`;
+}
+
+function html(props: Props) {
+  return GOOGLE_KEY ? googleHtml(props) : leafletHtml(props);
+}
+
+function leafletHtml({ pin, me, tileUrl, attribution }: Props) {
   const data = JSON.stringify({ pin, me, tileUrl, attribution });
   return `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=5">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" integrity="sha512-h9FcoyWjHcOcmEVkxOfTLnmZFWIH0iZhZT1H2TbOq55xssQGEJHEaIm+PgoUaZbRvQTNTluNOEfb1ZRy6D3BOw==" crossorigin="anonymous" referrerpolicy="no-referrer"/>
@@ -34,7 +61,7 @@ if(pts.length>1)map.fitBounds(pts,{padding:[30,30],maxZoom:16});else if(pts.leng
 
 export function MapWebView(props: Props) {
   const [full, setFull] = useState(false);
-  const src = useMemo(() => ({ html: html(props) }), [props.pin?.lat, props.pin?.lon, props.me?.lat, props.me?.lon, props.tileUrl]); // eslint-disable-line react-hooks/exhaustive-deps
+  const src = useMemo(() => ({ html: html(props), baseUrl: BASE_URL }), [props.pin?.lat, props.pin?.lon, props.me?.lat, props.me?.lon, props.tileUrl]); // eslint-disable-line react-hooks/exhaustive-deps
   const view = <WebView originWhitelist={["*"]} source={src} style={{ flex: 1 }} javaScriptEnabled setSupportMultipleWindows={false} />;
   return (
     <>
