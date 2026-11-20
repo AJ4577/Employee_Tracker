@@ -59,6 +59,16 @@ describe("self-registration", () => {
     await expectError(as(db, claims(ids.staff, "staff@reg.test", "aal1"), (tx) => rpc(tx, `public.admin_review_registration($1, true)`, [ids.dup])), "forbidden");
   });
 
+  test("welcome email can be claimed only once per user (service role)", async () => {
+    const first = await db.query<any>(`select * from public.claim_welcome_email($1)`, [ids.staff]);
+    expect(first.rows).toHaveLength(1);
+    const again = await db.query<any>(`select * from public.claim_welcome_email($1)`, [ids.staff]);
+    expect(again.rows).toHaveLength(0);
+    await db.query(`select public.release_welcome_email($1)`, [ids.staff]);
+    expect((await db.query<any>(`select * from public.claim_welcome_email($1)`, [ids.staff])).rows).toHaveLength(1);
+    await expectError(as(db, claims(ids.staff, "staff@reg.test", "aal1"), (tx) => tx.query(`select * from public.claim_welcome_email($1)`, [ids.staff])), /permission denied/);
+  });
+
   test("rejecting suspends the account", async () => {
     await as(db, claims(ids.noEmail, "noemail@reg.test"), (tx) => rpc(tx, `public.register_profile('Rejected Person', '9876500008', 'staff')`));
     const r = await as(db, claims(ids.owner, "owner@reg.test"), (tx) => rpc(tx, `public.admin_review_registration($1, false, null, 'unknown person')`, [ids.noEmail]));

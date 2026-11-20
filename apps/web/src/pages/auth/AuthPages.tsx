@@ -3,7 +3,7 @@ import { Link, Navigate, useNavigate } from "react-router-dom";
 import { normalizePhone } from "@kisanroute/shared";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../lib/auth";
-import { rpc, ApiError } from "../../lib/api";
+import { callFunction, rpc, ApiError } from "../../lib/api";
 import { Banner, Button, Select, TextInput } from "../../ui/ui";
 
 function AuthShell({ title, children }: { title: string; children: ReactNode }) {
@@ -198,6 +198,8 @@ export function RegisterPage() {
     const r = await rpc<{ status: string; role: string }>("register_profile", { p_display_name: f.name.trim(), p_phone: f.phone, p_role: f.role });
     setResult(r);
     saveDraft(null);
+    // One-time thank-you email from the app's own sender; registration never depends on it.
+    callFunction("send-welcome", {}).catch(() => {});
     rpc("log_session_event", { p_event: "login", p_device: device() }).catch(() => {});
     setStep("phone");
   };
