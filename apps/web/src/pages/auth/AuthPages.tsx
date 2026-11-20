@@ -358,7 +358,7 @@ export function MfaPage() {
       if (verified) setFactorId(verified.id);
       else {
         for (const f of data.all.filter((x) => x.status !== "verified")) await supabase.auth.mfa.unenroll({ factorId: f.id });
-        const { data: en, error: enErr } = await supabase.auth.mfa.enroll({ factorType: "totp", friendlyName: `KisanRoute ${new Date().toISOString().slice(0, 10)}` });
+        const { data: en, error: enErr } = await supabase.auth.mfa.enroll({ factorType: "totp", issuer: "KisanRoute", friendlyName: `Google Authenticator ${new Date().toISOString().slice(0, 10)}` });
         if (enErr) setErr(enErr.message);
         else {
           setFactorId(en.id);
@@ -393,15 +393,24 @@ export function MfaPage() {
       {loading ? <p>Preparing…</p> : null}
       {qr ? (
         <div className="stack">
-          <p>Admin accounts also need an authenticator app (Google Authenticator, Microsoft Authenticator, Authy). Scan this code:</p>
+          <p>Admin accounts are protected with <strong>Google Authenticator</strong>.</p>
+          <ol className="small">
+            <li>
+              Install Google Authenticator:{" "}
+              <a href="https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2" target="_blank" rel="noopener noreferrer">Android</a> ·{" "}
+              <a href="https://apps.apple.com/app/google-authenticator/id388497605" target="_blank" rel="noopener noreferrer">iPhone</a>
+            </li>
+            <li>Open it, tap <strong>+</strong> → <strong>Scan a QR code</strong>, and scan the code below.</li>
+            <li>Enter the 6-digit code shown for <strong>KisanRoute</strong>.</li>
+          </ol>
           <img src={qr} alt="Authenticator QR code" width={180} height={180} className="qr" />
-          <p className="small muted">Can't scan? Enter this key: <code>{secret}</code></p>
+          <p className="small muted">Can't scan? In Google Authenticator choose “Enter a setup key” and type: <code>{secret}</code></p>
         </div>
       ) : null}
       {err ? <Banner kind="error">{err}</Banner> : null}
       {factorId ? (
         <form onSubmit={verify} className="stack">
-          <TextInput label="6-digit code" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} />
+          <TextInput label="6-digit code from Google Authenticator" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} />
           <Button type="submit" busy={busy}>Verify</Button>
         </form>
       ) : null}
