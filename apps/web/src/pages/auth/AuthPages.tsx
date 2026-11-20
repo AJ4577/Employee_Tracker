@@ -134,11 +134,33 @@ export function LoginPage() {
 
 type RegStep = "form" | "otp" | "phone" | "phone-otp" | "done";
 
+// Registration details survive the email-link path (the link may open in a new tab). Cleared after registering.
+const DRAFT_KEY = "kr_register_draft";
+const loadDraft = (): { name: string; email: string; phone: string; role: string } | null => {
+  try {
+    const d = JSON.parse(localStorage.getItem(DRAFT_KEY) ?? "null");
+    return d && Date.now() - d.at < 24 * 3600e3 ? d : null;
+  } catch {
+    return null;
+  }
+};
+const saveDraft = (d: { name: string; email: string; phone: string; role: string } | null) => {
+  try {
+    if (d) localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...d, at: Date.now() }));
+    else localStorage.removeItem(DRAFT_KEY);
+  } catch {
+    /* storage unavailable: user re-enters details */
+  }
+};
+
 export function RegisterPage() {
   const { session, me, refreshMe } = useAuth();
   const nav = useNavigate();
   const [step, setStep] = useState<RegStep>("form");
-  const [f, setF] = useState({ name: "", email: "", phone: "", role: "staff" });
+  const [f, setF] = useState(() => {
+    const d = loadDraft();
+    return { name: d?.name ?? "", email: d?.email ?? "", phone: d?.phone ?? "", role: d?.role ?? "staff" };
+  });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -161,7 +183,12 @@ export function RegisterPage() {
   const sendEmailOtp = async () => {
     setBusy(true);
     setErr(null);
-    const { error } = await supabase.auth.signInWithOtp({ email: f.email.trim().toLowerCase(), options: { shouldCreateUser: true } });
+    saveDraft(f);
+    const { error } = await supabase.auth.signInWithOtp({
+      email: f.email.trim().toLowerCase(),
+      // If the email contains a link instead of a code, the link brings the user back here to finish.
+      options: { shouldCreateUser: true, emailRedirectTo: `${location.origin}${import.meta.env.BASE_URL}register` },
+    });
     setBusy(false);
     if (error) return setErr(authMessage(error, "register"));
     setStep("otp");
@@ -170,6 +197,7 @@ export function RegisterPage() {
   const createProfile = async () => {
     const r = await rpc<{ status: string; role: string }>("register_profile", { p_display_name: f.name.trim(), p_phone: f.phone, p_role: f.role });
     setResult(r);
+    saveDraft(null);
     rpc("log_session_event", { p_event: "login", p_device: device() }).catch(() => {});
     setStep("phone");
   };

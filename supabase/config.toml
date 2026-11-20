@@ -1,5 +1,6 @@
-# Supabase CLI configuration for local development (`npx supabase start`, needs Docker).
-# Production settings (Auth URLs, SMTP, MFA) are configured in the Supabase dashboard — see docs/DEPLOYMENT.md.
+# Supabase CLI configuration. Used by `npx supabase start` (local, needs Docker) and pushed to the
+# linked project with `npx supabase config push` (auth URLs, OTP email templates, MFA).
+# SMTP credentials are NOT stored here — set them in the dashboard (Authentication → Emails → SMTP).
 project_id = "kisanroute"
 
 [api]
@@ -26,8 +27,8 @@ file_size_limit = "10MiB"
 
 [auth]
 enabled = true
-site_url = "http://localhost:5173"
-additional_redirect_urls = ["http://localhost:5173/accept-invite", "http://localhost:5173/reset-password", "kisanroute://auth-callback"]
+site_url = "https://aj4577.github.io/Employee_Tracker/"
+additional_redirect_urls = ["https://aj4577.github.io/Employee_Tracker/accept-invite", "http://localhost:5173", "http://localhost:5173/accept-invite", "kisanroute://auth-callback"]
 jwt_expiry = 3600
 enable_refresh_token_rotation = true
 refresh_token_reuse_interval = 10
@@ -37,7 +38,7 @@ minimum_password_length = 10
 password_requirements = "lower_upper_letters_digits"
 
 [auth.rate_limit]
-email_sent = 30
+# email_sent is fixed by Supabase until custom SMTP is configured.
 sign_in_sign_ups = 30
 token_verifications = 30
 
@@ -49,17 +50,19 @@ otp_length = 6
 otp_expiry = 600
 
 # Email templates must contain {{ .Token }} so users receive a 6-digit code (not only a link).
-[auth.email.template.magic_link]
-subject = "Your KisanRoute sign-in code"
-content_path = "./supabase/templates/otp.html"
-
-[auth.email.template.confirmation]
-subject = "Your KisanRoute verification code"
-content_path = "./supabase/templates/otp.html"
+# Supabase allows template changes only after custom SMTP is configured (free tier). After setting SMTP in
+# the dashboard, uncomment these and run `npx supabase config push`.
+# [auth.email.template.magic_link]
+# subject = "Your KisanRoute sign-in code"
+# content_path = "./supabase/templates/otp.html"
+#
+# [auth.email.template.confirmation]
+# subject = "Your KisanRoute verification code"
+# content_path = "./supabase/templates/otp.html"
 
 [auth.sms]
-# Phone OTP needs an SMS provider (Twilio, MessageBird, Textlocal, Vonage) — configure in the dashboard.
-enabled = true
+# Phone OTP needs an SMS provider (Twilio, MessageBird, Textlocal, Vonage). Turn on after configuring one.
+enabled = false
 enable_confirmations = true
 
 [auth.mfa]
