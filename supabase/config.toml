@@ -50,15 +50,14 @@ otp_length = 6
 otp_expiry = 600
 
 # Email templates must contain {{ .Token }} so users receive a 6-digit code (not only a link).
-# Supabase allows template changes only after custom SMTP is configured (free tier). After setting SMTP in
-# the dashboard, uncomment these and run `npx supabase config push`.
-# [auth.email.template.magic_link]
-# subject = "Your KisanRoute sign-in code"
-# content_path = "./supabase/templates/otp.html"
-#
-# [auth.email.template.confirmation]
-# subject = "Your KisanRoute verification code"
-# content_path = "./supabase/templates/otp.html"
+# Supabase allows template changes only with custom SMTP (configured in the dashboard, Gmail).
+[auth.email.template.magic_link]
+subject = "Your KisanRoute sign-in code"
+content_path = "./supabase/templates/otp.html"
+
+[auth.email.template.confirmation]
+subject = "Your KisanRoute verification code"
+content_path = "./supabase/templates/otp.html"
 
 [auth.sms]
 # Phone OTP needs an SMS provider (Twilio, MessageBird, Textlocal, Vonage). Turn on after configuring one.
