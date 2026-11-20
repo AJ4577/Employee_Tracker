@@ -1,0 +1,8 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Public Supabase anon key for project wrduxamtdhfumhappuym (browser-safe by design; RLS enforces access). service_role keys are still detected."
+regexes = [
+  '''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyZHV4YW10ZGhmdW1oYXBwdXltIiwicm9sZSI6ImFub24i[A-Za-z0-9_\-.]*''',
+]
