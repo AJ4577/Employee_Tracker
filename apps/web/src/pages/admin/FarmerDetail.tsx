@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  distanceMeters,
   fieldErrors,
   formatINR,
   formatInTz,
@@ -57,6 +58,28 @@ export default function FarmerDetail() {
     queryKey: ["farmer-visits", id],
     queryFn: () => must<(Visit & { staff: { display_name: string } | null })[]>(supabase.from("visits").select("*, staff:profiles(display_name)").eq("farmer_id", id!).order("scheduled_at", { ascending: false }).limit(100)),
   });
+
+  // Sanity check before confirming: where does Google place the farmer's address? A pin many km away
+  // is almost always a mistake (e.g. a pin dropped in another city).
+  const confirmPin = async (c: { lat: number; lon: number; source: string }) => {
+    const fd = farmer.data;
+    const addr = [fd?.address, fd?.village, fd?.district, fd?.state, fd?.postcode].filter(Boolean).join(", ");
+    const g = (window as unknown as { google?: { maps?: { importLibrary?: (n: string) => Promise<unknown> } } }).google;
+    if (addr && g?.maps?.importLibrary) {
+      try {
+        const { Place } = (await g.maps.importLibrary("places")) as google.maps.PlacesLibrary;
+        const { places } = await Place.searchByText({ textQuery: addr, fields: ["location"], region: "in", maxResultCount: 1 });
+        const loc = places[0]?.location;
+        if (loc) {
+          const km = distanceMeters({ lat: c.lat, lon: c.lon }, { lat: loc.lat(), lon: loc.lng() }) / 1000;
+          if (km > 5 && !window.confirm(`This pin is about ${Math.round(km)} km away from the farmer's address (${fd?.village ?? fd?.district ?? "address"}).\n\nDirections for staff will go to the pin. Confirm this pin anyway?`)) return;
+        }
+      } catch {
+        /* address check unavailable: confirm normally */
+      }
+    }
+    verify.mutate(c);
+  };
 
   const verify = useMutation({
     mutationFn: (c: { lat: number; lon: number; source: string }) => rpc<Farmer>("verify_farmer_location", { p_farmer: id, p_lat: c.lat, p_lon: c.lon, p_source: c.source }),
@@ -137,11 +160,11 @@ export default function FarmerDetail() {
             </Button>
             {candidate ? (
               <>
-                <Button onClick={() => verify.mutate(candidate)} busy={verify.isPending}>Confirm pin</Button>
+                <Button onClick={() => confirmPin(candidate)} busy={verify.isPending}>Confirm pin</Button>
                 <Button variant="ghost" onClick={() => setCandidate(null)}>Discard</Button>
               </>
             ) : f.lat !== null && !f.location_verified ? (
-              <Button onClick={() => verify.mutate({ lat: f.lat!, lon: f.lon!, source: f.geocode_source ?? "admin_pin" })} busy={verify.isPending}>Confirm current pin</Button>
+              <Button onClick={() => confirmPin({ lat: f.lat!, lon: f.lon!, source: f.geocode_source ?? "admin_pin" })} busy={verify.isPending}>Confirm current pin</Button>
             ) : null}
           </div>
         </Section>
