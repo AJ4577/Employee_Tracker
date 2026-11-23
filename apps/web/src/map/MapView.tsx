@@ -102,10 +102,10 @@ function LeafletMapView({ markers = [], routes, center, zoom, height = 360, onPi
         <Resize dep={full} />
         <PickHandler onPick={onPick} />
         {(routes ?? []).filter((r) => r.length > 1).map((r, i) => (
-          <Polyline key={`r${i}`} positions={r as LatLngExpression[]} pathOptions={{ color: "#1a73e8", weight: 6, opacity: 0.95 }} />
+          <Polyline key={`r${i}`} positions={r as LatLngExpression[]} pathOptions={{ color: "#0b57d0", weight: 7, opacity: 1 }} />
         ))}
         {(estimatedRoutes ?? []).filter((r) => r.length > 1).map((r, i) => (
-          <Polyline key={`e${i}`} positions={r as LatLngExpression[]} pathOptions={{ color: "#1a73e8", weight: 5, opacity: 0.4 }} />
+          <Polyline key={`e${i}`} positions={r as LatLngExpression[]} pathOptions={{ color: "#0b57d0", weight: 5, opacity: 0.6 }} />
         ))}
         {(gapLines ?? []).map((gl, i) => (
           <Polyline key={`g${i}`} positions={gl as LatLngExpression[]} pathOptions={{ color: "#6b7280", weight: 3, opacity: 0.85, dashArray: "4 8" }} />

@@ -176,14 +176,14 @@ function Routes({ routes, gapLines, estimatedRoutes }: { routes?: [number, numbe
       if (r.length < 2) continue;
       const path = r.map(([lat, lng]) => ({ lat, lng }));
       // White casing under a bold blue line with direction arrows: readable on map and satellite.
-      lines.push(new google.maps.Polyline({ map, path, strokeColor: "#ffffff", strokeOpacity: 0.95, strokeWeight: 9, zIndex: 1, clickable: false }));
+      lines.push(new google.maps.Polyline({ map, path, strokeColor: "#ffffff", strokeOpacity: 0.95, strokeWeight: 10, zIndex: 1, clickable: false }));
       lines.push(
         new google.maps.Polyline({
           map,
           path,
-          strokeColor: "#1a73e8",
+          strokeColor: "#0b57d0",
           strokeOpacity: 1,
-          strokeWeight: 5,
+          strokeWeight: 6,
           zIndex: 2,
           clickable: false,
           icons: [{ icon: { path: google.maps.SymbolPath.FORWARD_OPEN_ARROW, scale: 2.4, strokeColor: "#ffffff", strokeWeight: 2 }, offset: "50px", repeat: "110px" }],
@@ -196,8 +196,8 @@ function Routes({ routes, gapLines, estimatedRoutes }: { routes?: [number, numbe
         new google.maps.Polyline({
           map,
           path: r.map(([lat, lng]) => ({ lat, lng })),
-          strokeColor: "#1a73e8",
-          strokeOpacity: 0.4,
+          strokeColor: "#0b57d0",
+          strokeOpacity: 0.6,
           strokeWeight: 5,
           zIndex: 1,
           clickable: false,
