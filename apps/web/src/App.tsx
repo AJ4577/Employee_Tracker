@@ -16,6 +16,8 @@ const Tracking = lazy(() => import("./pages/admin/Tracking"));
 const Farmers = lazy(() => import("./pages/admin/Farmers"));
 const FarmerDetail = lazy(() => import("./pages/admin/FarmerDetail"));
 const Products = lazy(() => import("./pages/admin/Products"));
+const Distributors = lazy(() => import("./pages/admin/Distributors"));
+const DistributorDetail = lazy(() => import("./pages/admin/DistributorDetail"));
 const Staff = lazy(() => import("./pages/admin/Staff"));
 const Reports = lazy(() => import("./pages/admin/Reports"));
 const Settings = lazy(() => import("./pages/admin/Settings"));
@@ -96,6 +98,8 @@ export function App() {
           <Route path="farmers" element={<Farmers />} />
           <Route path="farmers/:id" element={<FarmerDetail />} />
           <Route path="products" element={<Products />} />
+          <Route path="distributors" element={<Distributors />} />
+          <Route path="distributors/:id" element={<DistributorDetail />} />
           <Route path="staff" element={<Staff />} />
           <Route path="reports" element={<Reports />} />
           <Route path="settings" element={<Settings />} />

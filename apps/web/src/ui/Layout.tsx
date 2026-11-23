@@ -17,6 +17,7 @@ export const ADMIN_NAV: NavItem[] = [
   { to: "/admin/visits", label: "Visits & tasks", icon: "☑" },
   { to: "/admin/tracking", label: "Live tracking", icon: "⌖" },
   { to: "/admin/farmers", label: "Farmers", icon: "♣" },
+  { to: "/admin/distributors", label: "Distributors", icon: "⛟" },
   { to: "/admin/products", label: "Products", icon: "▦" },
   { to: "/admin/staff", label: "Staff", icon: "☺" },
   { to: "/admin/reports", label: "Reports", icon: "▤" },

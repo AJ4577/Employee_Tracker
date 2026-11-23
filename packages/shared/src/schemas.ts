@@ -56,6 +56,29 @@ export const farmerInput = z.object({
 });
 export type FarmerInput = z.infer<typeof farmerInput>;
 
+export const distributorInput = z.object({
+  name: trimmed(1, 160),
+  contact_person: optText(120),
+  phone: z
+    .string()
+    .trim()
+    .max(20)
+    .optional()
+    .nullable()
+    .refine((v) => !v || normalizePhone(v) !== null, "Enter a valid 10-digit mobile number"),
+  alt_contact: optText(120),
+  email: z.string().trim().max(200).optional().nullable().refine((v) => !v || /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v), "Enter a valid email"),
+  gstin: z.string().trim().max(15).optional().nullable().refine((v) => !v || /^[0-9]{2}[A-Z0-9]{10}[0-9A-Z]{3}$/i.test(v), "GSTIN should be 15 characters, e.g. 27ABCDE1234F1Z5"),
+  address: optText(1000),
+  village: optText(120),
+  district: optText(120),
+  state: optText(120),
+  postcode: z.string().trim().max(10).optional().nullable().refine((v) => !v || /^[0-9A-Za-z -]{3,10}$/.test(v), "Invalid postcode"),
+  notes: optText(4000),
+  active: z.boolean().default(true),
+});
+export type DistributorInput = z.infer<typeof distributorInput>;
+
 export const purchaseItemInput = z.object({
   product_id: z.string().uuid(),
   quantity: z.string().trim().regex(/^\d{1,9}(\.\d{1,3})?$/, "Quantity like 2 or 2.5").refine((v) => Number(v) > 0, "Must be more than 0"),

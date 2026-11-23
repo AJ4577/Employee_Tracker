@@ -270,3 +270,28 @@ export const EVENT_LABEL: Record<string, string> = {
   return_ended: "Returned",
   trip_ended_by_duty: "Trip closed at duty end",
 };
+
+export interface Distributor {
+  id: string;
+  name: string;
+  contact_person: string | null;
+  phone: string | null;
+  normalized_phone: string | null;
+  alt_contact: string | null;
+  email: string | null;
+  gstin: string | null;
+  address: string | null;
+  village: string | null;
+  district: string | null;
+  state: string | null;
+  postcode: string | null;
+  notes: string | null;
+  lat: number | null;
+  lon: number | null;
+  location_verified: boolean;
+  geocode_source: string | null;
+  location_confirmed_at: string | null;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
