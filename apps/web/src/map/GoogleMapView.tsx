@@ -334,14 +334,28 @@ export function GoogleMapView({ markers = [], routes, center, zoom, height = 360
     };
   }, [full]);
 
-  const all: MapMarker[] = searchPin ? [...markers, { id: "search", lat: searchPin.lat, lon: searchPin.lon, label: searchPin.label, kind: "search" }] : markers;
+  // Search never changes a pin by itself; with onPick the result offers an explicit 'Set farm pin here'.
+  const searchPopup = (r: LocalSearchResult) => (
+    <div>
+      <strong>{r.label}</strong>
+      {onPick ? (
+        <>
+          <br />
+          <button type="button" className="btn btn-primary btn-sm" style={{ marginTop: 6 }} onClick={() => { onPick(r.lat, r.lon); setOpenInfo(null); setSearchPin(null); }}>
+            Set farm pin here
+          </button>
+        </>
+      ) : null}
+    </div>
+  );
+  const all: MapMarker[] = searchPin ? [...markers, { id: "search", lat: searchPin.lat, lon: searchPin.lon, label: searchPin.label, kind: "search", popup: searchPopup(searchPin) }] : markers;
   const info = all.find((m) => m.id === openInfo);
 
   return (
     <APIProvider apiKey={KEY!} region="IN" language="en">
       <div ref={wrapRef} className={`mapwrap ${full ? "mapwrap-full" : ""}`} style={full ? undefined : { height }} role="region" aria-label={title}>
         <div className="map-toolbar map-toolbar-google">
-          {searchable ? <GoogleSearch localSearch={localSearch} onSelect={setSearchPin} /> : <span />}
+          {searchable ? <GoogleSearch localSearch={localSearch} onSelect={(r) => { setSearchPin(r); setOpenInfo(r && onPick ? "search" : null); }} /> : <span />}
           <button className="map-btn" onClick={() => setFull((f) => !f)} aria-label={full ? "Exit full screen map" : "Open full screen map"}>
             {full ? "✕ Close" : "⤢ Full screen"}
           </button>

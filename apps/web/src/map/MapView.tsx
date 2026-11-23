@@ -85,7 +85,17 @@ function LeafletMapView({ markers = [], routes, center, zoom, height = 360, onPi
     };
   }, [full]);
 
-  const all = searchPin ? [...markers, { id: "search", lat: searchPin.lat, lon: searchPin.lon, label: searchPin.label, kind: "search" as const }] : markers;
+  const all: MapMarker[] = searchPin
+    ? [...markers, {
+        id: "search", lat: searchPin.lat, lon: searchPin.lon, label: searchPin.label, kind: "search" as const,
+        popup: (
+          <div>
+            <strong>{searchPin.label}</strong>
+            {onPick ? (<><br /><button type="button" className="btn btn-primary btn-sm" style={{ marginTop: 6 }} onClick={() => { onPick(searchPin.lat, searchPin.lon); setSearchPin(null); }}>Set farm pin here</button></>) : null}
+          </div>
+        ),
+      }]
+    : markers;
 
   return (
     <div ref={wrapRef} className={`mapwrap ${full ? "mapwrap-full" : ""}`} style={full ? undefined : { height }} role="region" aria-label={title}>
