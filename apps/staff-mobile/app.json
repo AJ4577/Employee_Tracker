@@ -7,11 +7,6 @@
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#1f6f3a"
-    },
     "ios": {
       "bundleIdentifier": "com.greenfieldagro.kisanroute.staff",
       "supportsTablet": true,
@@ -68,7 +63,16 @@
         }
       ],
       "expo-secure-store",
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#1f6f3a"
+        }
+      ]
     ],
     "extra": {
       "eas": {
