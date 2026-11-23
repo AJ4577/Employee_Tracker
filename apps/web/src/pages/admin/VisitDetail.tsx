@@ -71,7 +71,8 @@ export default function VisitDetailAdmin() {
           {arrivedEv?.reason ? <Banner kind="warn">Override reason: “{arrivedEv.reason}”</Banner> : null}
           {outbound || ret ? (
             <p className="small">
-              <Link to={`/admin/tracking?staff=${v.staff_id}&date=${utcToLocalInput(v.started_at ?? v.scheduled_at, tz).slice(0, 10)}`}>View actual GPS route for this day →</Link>
+              <Link className="btn btn-secondary btn-sm" to={`/admin/tracking?staff=${v.staff_id}&date=${utcToLocalInput(v.started_at ?? v.scheduled_at, tz).slice(0, 10)}&visit=${v.id}`}>▶ Play route for this visit</Link>{" "}
+              <Link to={`/admin/tracking?staff=${v.staff_id}&date=${utcToLocalInput(v.started_at ?? v.scheduled_at, tz).slice(0, 10)}`}>Whole day →</Link>
             </p>
           ) : null}
         </Section>

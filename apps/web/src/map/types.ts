@@ -5,7 +5,9 @@ export interface MapMarker {
   lat: number;
   lon: number;
   label: string;
-  kind: "farmer" | "farmer-approx" | "staff-live" | "staff-stale" | "staff-last" | "search" | "me" | "pick";
+  kind: "farmer" | "farmer-approx" | "staff-live" | "staff-stale" | "staff-last" | "search" | "me" | "pick" | "stop" | "vehicle";
+  /** Short text drawn on the marker, e.g. a stop number. */
+  badge?: string;
   accuracy_m?: number | null;
   popup?: ReactNode;
 }
@@ -33,4 +35,6 @@ export interface MapProps {
   searchable?: boolean;
   title?: string;
   legend?: ReactNode;
+  /** When set, the map only re-fits when this changes (e.g. during playback a moving marker must not refit). */
+  fitKey?: string;
 }

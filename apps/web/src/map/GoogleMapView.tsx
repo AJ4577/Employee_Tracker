@@ -17,11 +17,13 @@ const COLORS: Record<MapMarker["kind"], string> = {
   search: "#c2185b",
   me: "#1d6fd6",
   pick: "#6b21a8",
+  stop: "#c2410c",
+  vehicle: "#111827",
 };
 
 function pinIcon(kind: MapMarker["kind"]): google.maps.Icon {
   const c = COLORS[kind];
-  const round = kind.startsWith("staff") || kind === "me";
+  const round = kind.startsWith("staff") || kind === "me" || kind === "stop" || kind === "vehicle";
   const svg = round
     ? `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26"><circle cx="13" cy="13" r="10" fill="${c}" stroke="#fff" stroke-width="3"/></svg>`
     : `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="38" viewBox="0 0 28 38"><path d="M14 1C7 1 1.5 6.4 1.5 13.3 1.5 23 14 37 14 37s12.5-14 12.5-23.7C26.5 6.4 21 1 14 1z" fill="${c}" stroke="#fff" stroke-width="2.5"/><circle cx="14" cy="13.5" r="4.5" fill="#fff"/></svg>`;
@@ -29,6 +31,7 @@ function pinIcon(kind: MapMarker["kind"]): google.maps.Icon {
     url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
     scaledSize: round ? new google.maps.Size(26, 26) : new google.maps.Size(28, 38),
     anchor: round ? new google.maps.Point(13, 13) : new google.maps.Point(14, 37),
+    labelOrigin: round ? new google.maps.Point(13, 13) : new google.maps.Point(14, 14),
   };
 }
 
@@ -36,13 +39,23 @@ function pinIcon(kind: MapMarker["kind"]): google.maps.Icon {
 function PinMarker({ m, onClick }: { m: MapMarker; onClick: () => void }) {
   const loaded = useApiIsLoaded();
   if (!loaded || typeof google === "undefined") return null;
-  return <Marker position={{ lat: m.lat, lng: m.lon }} title={m.label} icon={pinIcon(m.kind)} onClick={onClick} />;
+  return (
+    <Marker
+      position={{ lat: m.lat, lng: m.lon }}
+      title={m.label}
+      icon={pinIcon(m.kind)}
+      label={m.badge ? { text: m.badge, color: "#fff", fontWeight: "700", fontSize: "11px" } : undefined}
+      zIndex={m.kind === "vehicle" ? 1000 : undefined}
+      onClick={onClick}
+    />
+  );
 }
 
 /** Fit to markers/routes, or center on a given point. Re-runs only when the content actually changes. */
-function FitTo({ markers, routes, center, zoom }: Pick<MapProps, "markers" | "routes" | "center" | "zoom">) {
+function FitTo({ markers, routes, center, zoom, fitKey }: Pick<MapProps, "markers" | "routes" | "center" | "zoom" | "fitKey">) {
   const map = useMap();
-  const key = useMemo(() => JSON.stringify([center, markers?.map((m) => [m.lat, m.lon]), routes?.map((r) => r.length)]), [center, markers, routes]);
+  const auto = useMemo(() => JSON.stringify([center, markers?.map((m) => [m.lat, m.lon]), routes?.map((r) => r.length)]), [center, markers, routes]);
+  const key = fitKey ?? auto;
   useEffect(() => {
     if (!map) return;
     if (center) {
@@ -181,7 +194,7 @@ function GoogleSearch({ localSearch, onSelect }: { localSearch?: (q: string) => 
   );
 }
 
-export function GoogleMapView({ markers = [], routes, center, zoom, height = 360, onPick, localSearch, searchable = true, title = "Map", legend }: MapProps) {
+export function GoogleMapView({ markers = [], routes, center, zoom, height = 360, onPick, localSearch, searchable = true, title = "Map", legend, fitKey }: MapProps) {
   const [full, setFull] = useState(false);
   const [searchPin, setSearchPin] = useState<LocalSearchResult | null>(null);
   const [openInfo, setOpenInfo] = useState<string | null>(null);
@@ -227,7 +240,7 @@ export function GoogleMapView({ markers = [], routes, center, zoom, height = 360
             if (ll && onPick) onPick(ll.lat, ll.lng);
           }}
         >
-          <FitTo markers={markers} routes={routes} center={center} zoom={zoom} />
+          <FitTo markers={markers} routes={routes} center={center} zoom={zoom} fitKey={fitKey} />
           <Recenter to={searchPin} />
           <Routes routes={routes} />
           <AccuracyCircles markers={all} />

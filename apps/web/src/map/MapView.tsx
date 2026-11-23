@@ -13,18 +13,19 @@ export type { LocalSearchResult, MapMarker, MapProps } from "./types";
 
 const DEFAULT_CENTER: [number, number] = [20.5937, 78.9629]; // India
 
-const icon = (kind: MapMarker["kind"], label: string) =>
+const icon = (kind: MapMarker["kind"], label: string, badge?: string) =>
   L.divIcon({
     className: "",
-    html: `<div class="pin pin-${kind}" aria-label="${label.replace(/[<>"&]/g, "")}"></div>`,
+    html: `<div class="pin pin-${kind}" aria-label="${label.replace(/[<>"&]/g, "")}">${badge ? `<span class="pin-badge">${badge.replace(/[<>"&]/g, "")}</span>` : ""}</div>`,
     iconSize: [26, 26],
     iconAnchor: [13, 26],
     popupAnchor: [0, -24],
   });
 
-function FitTo({ markers, routes, center, zoom }: Pick<MapProps, "markers" | "routes" | "center" | "zoom">) {
+function FitTo({ markers, routes, center, zoom, fitKey }: Pick<MapProps, "markers" | "routes" | "center" | "zoom" | "fitKey">) {
   const map = useMap();
-  const key = useMemo(() => JSON.stringify([center, markers?.map((m) => [m.lat, m.lon]), routes?.map((r) => r.length)]), [center, markers, routes]);
+  const auto = useMemo(() => JSON.stringify([center, markers?.map((m) => [m.lat, m.lon]), routes?.map((r) => r.length)]), [center, markers, routes]);
+  const key = fitKey ?? auto;
   useEffect(() => {
     if (center) {
       map.setView(center, zoom ?? 15);
@@ -65,7 +66,7 @@ export function MapView(props: MapProps) {
   return hasGoogleMaps ? <GoogleMapView {...props} /> : <LeafletMapView {...props} />;
 }
 
-function LeafletMapView({ markers = [], routes, center, zoom, height = 360, onPick, localSearch, searchable = true, title = "Map", legend }: MapProps) {
+function LeafletMapView({ markers = [], routes, center, zoom, height = 360, onPick, localSearch, searchable = true, title = "Map", legend, fitKey }: MapProps) {
   const { settings } = useAuth();
   const [full, setFull] = useState(false);
   const [searchPin, setSearchPin] = useState<LocalSearchResult | null>(null);
@@ -94,7 +95,7 @@ function LeafletMapView({ markers = [], routes, center, zoom, height = 360, onPi
       </div>
       <MapContainer center={center ?? DEFAULT_CENTER} zoom={center ? zoom ?? 15 : 5} className="map" scrollWheelZoom={full} attributionControl>
         <TileLayer url={settings.map_tile_url} attribution={settings.map_tile_attribution} maxZoom={19} />
-        <FitTo markers={markers} routes={routes} center={center} zoom={zoom} />
+        <FitTo markers={markers} routes={routes} center={center} zoom={zoom} fitKey={fitKey} />
         <Recenter to={searchPin ? [searchPin.lat, searchPin.lon] : null} />
         <Resize dep={full} />
         <PickHandler onPick={onPick} />
@@ -102,7 +103,7 @@ function LeafletMapView({ markers = [], routes, center, zoom, height = 360, onPi
           <Polyline key={`r${i}`} positions={r as LatLngExpression[]} pathOptions={{ color: "#1f6f3a", weight: 4, opacity: 0.85 }} />
         ))}
         {all.map((m) => (
-          <Marker key={m.id} position={[m.lat, m.lon]} icon={icon(m.kind, m.label)} title={m.label} alt={m.label}>
+          <Marker key={m.id} position={[m.lat, m.lon]} icon={icon(m.kind, m.label, m.badge)} title={m.label} alt={m.label}>
             <Popup>{m.popup ?? <strong>{m.label}</strong>}</Popup>
           </Marker>
         ))}

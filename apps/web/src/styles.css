@@ -321,3 +321,26 @@ input[type="checkbox"] { width: 20px; height: 20px; min-height: 0; accent-color:
 .role-admin { background: var(--info-bg); color: var(--info); border-color: #c4d8f0; }
 .role-staff { background: var(--green-100); color: var(--green-900); border-color: #bfdcc9; }
 @media (max-width: 760px) { .topbar-right .badge[class*="role-"] { display: none; } }
+
+/* route history & playback */
+.route-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 12px; }
+.route-summary > div { background: var(--green-50); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; }
+.route-summary strong { font-size: 1.15rem; color: var(--green-900); }
+.route-body { display: grid; grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr); gap: 16px; }
+.playback { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 0; }
+.playback select { width: auto; min-height: 36px; }
+.playback input[type="range"] { flex: 1 1 200px; min-height: 0; padding: 0; accent-color: var(--green-700); }
+.playback-readout { display: flex; gap: 12px; font-variant-numeric: tabular-nums; background: #111827; color: #fff; border-radius: 8px; padding: 6px 10px; font-size: 0.88rem; }
+.route-timeline { list-style: none; margin: 0; padding: 0; max-height: 560px; overflow-y: auto; border-left: 2px solid var(--line); }
+.route-timeline li > button { display: flex; gap: 10px; align-items: flex-start; width: 100%; text-align: left; background: none; border: 0; padding: 8px 10px; font: inherit; color: inherit; cursor: pointer; border-radius: 8px; }
+.route-timeline li > button:hover { background: var(--green-50); }
+.route-timeline .flagged > button { background: var(--warn-bg); }
+.rt-badge { flex: none; width: 24px; height: 24px; border-radius: 50%; background: #c2410c; color: #fff; font-weight: 700; font-size: 0.8rem; display: inline-flex; align-items: center; justify-content: center; }
+.rt-dot { flex: none; width: 10px; height: 10px; margin: 6px 7px; border-radius: 50%; background: var(--green-700); }
+.rt-gap { padding: 6px 10px; color: var(--warn); }
+.block { display: block; }
+.pin-stop, .pin-vehicle { border-radius: 50%; transform: none; display: flex; align-items: center; justify-content: center; }
+.pin-stop { background: #c2410c; }
+.pin-vehicle { background: #111827; width: 22px; height: 22px; }
+.pin-badge { color: #fff; font: 700 11px system-ui, sans-serif; }
+@media (max-width: 1024px) { .route-body { grid-template-columns: 1fr; } .route-timeline { max-height: none; } }
