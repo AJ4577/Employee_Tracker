@@ -316,3 +316,8 @@ input[type="checkbox"] { width: 20px; height: 20px; min-height: 0; accent-color:
 @keyframes pulse { 50% { opacity: 0.3; } }
 @media (prefers-reduced-motion: reduce) { .track-on .dot { animation: none; } }
 @media (min-width: 900px) { .track-pill { bottom: 16px; } }
+
+.role-owner { background: #fff1d6; color: #7a4b00; border-color: #f0d29a; }
+.role-admin { background: var(--info-bg); color: var(--info); border-color: #c4d8f0; }
+.role-staff { background: var(--green-100); color: var(--green-900); border-color: #bfdcc9; }
+@media (max-width: 760px) { .topbar-right .badge[class*="role-"] { display: none; } }

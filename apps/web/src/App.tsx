@@ -100,6 +100,7 @@ export function App() {
           <Route path="reports" element={<Reports />} />
           <Route path="settings" element={<Settings />} />
           <Route path="help" element={<Help />} />
+          <Route path="profile" element={<Profile />} />
           <Route path="notifications" element={<NotificationsPage base="/admin" />} />
         </Route>
         <Route

@@ -10,6 +10,8 @@ interface NavItem {
   icon: string;
 }
 
+export const ROLE_LABEL = { owner: "Owner", admin: "Admin", staff: "Staff" } as const;
+
 export const ADMIN_NAV: NavItem[] = [
   { to: "/admin", label: "Overview", icon: "◎" },
   { to: "/admin/visits", label: "Visits & tasks", icon: "☑" },
@@ -19,6 +21,7 @@ export const ADMIN_NAV: NavItem[] = [
   { to: "/admin/staff", label: "Staff", icon: "☺" },
   { to: "/admin/reports", label: "Reports", icon: "▤" },
   { to: "/admin/settings", label: "Settings", icon: "⚙" },
+  { to: "/admin/profile", label: "My profile", icon: "☺" },
   { to: "/admin/help", label: "How it works", icon: "?" },
 ];
 
@@ -68,6 +71,7 @@ export function AppLayout({ nav, bottomNav }: { nav: NavItem[]; bottomNav?: bool
           <span className="who" title={me?.profile.email}>
             {me?.profile.display_name}
           </span>
+          {me ? <span className={`badge role-${me.profile.role}`} title="Your role">{ROLE_LABEL[me.profile.role]}</span> : null}
           <button className="btn btn-ghost btn-sm" onClick={() => signOut()}>
             Sign out
           </button>

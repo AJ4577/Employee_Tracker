@@ -61,7 +61,7 @@ export default function VisitDetailAdmin() {
               ["Left for visit (kab gaya)", formatInTz(v.started_at, tz)],
               ["Arrived (kab pahuncha)", formatInTz(v.arrived_at, tz)],
               ["Travel time", formatDuration(v.started_at, v.arrived_at)],
-              ["Arrival check", arrivedEv ? `${arrivedEv.distance_m !== null ? formatDistance(arrivedEv.distance_m) + " from pin" : "no GPS fix"}${arrivedEv.accuracy_m ? `, ±${Math.round(arrivedEv.accuracy_m)} m` : ""}${arrivedEv.flagged ? " · ⚑ manual override" : " · within radius"}` : "Not recorded"],
+              ["Arrival check", arrivedEv ? arrivalText(arrivedEv) : "Not recorded"],
               ["Meeting done (kab meeting done)", formatInTz(v.completed_at, tz)],
               ["Meeting duration", formatDuration(v.arrived_at, v.completed_at)],
               ["Return started", formatInTz(ret?.started_at, tz)],
@@ -133,6 +133,18 @@ export default function VisitDetailAdmin() {
       <ActionModal action={action} onClose={() => setAction(null)} detail={d} />
     </>
   );
+}
+
+function arrivalText(e: AdminVisitDetail["events"][number]): string {
+  const g = (e.metadata as { geofence?: string } | undefined)?.geofence;
+  const acc = e.accuracy_m ? ` (GPS ±${Math.round(e.accuracy_m)} m)` : "";
+  const what =
+    g === "no_target_pin" ? `farm had no pin, distance not checked${acc}`
+    : g === "no_device_fix" ? "no GPS fix from the phone"
+    : g === "low_accuracy" ? `GPS too weak to confirm${e.distance_m !== null ? `, ~${formatDistance(e.distance_m)} from pin` : ""}${acc}`
+    : e.distance_m !== null ? `${formatDistance(e.distance_m)} from pin${acc}`
+    : `not checked${acc}`;
+  return `${what}${e.flagged ? " · ⚑ manual override" : " · within radius"}`;
 }
 
 function Attachments({ items }: { items: AdminVisitDetail["attachments"] }) {
