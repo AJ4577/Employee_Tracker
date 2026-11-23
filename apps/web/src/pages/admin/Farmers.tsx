@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { farmerInput, fieldErrors, maskPhone, type Farmer } from "@kisanroute/shared";
 import { supabase } from "../../lib/supabase";
 import { must, rpc, ApiError } from "../../lib/api";
+import { geocodeFarmerAddress } from "../../lib/googlePlaces";
 import { useDebounced } from "../../lib/hooks";
 import { ilikeSafe, useActiveProducts } from "../../lib/data";
 import { useToast } from "../../ui/toast";
@@ -121,15 +122,35 @@ export function FarmerForm({ open, onClose, farmer }: { open: boolean; onClose: 
           return null;
         }
       }
-      if (farmer) return must<Farmer>(supabase.from("farmers").update(parsed.data).eq("id", farmer.id).select().single());
-      return must<Farmer>(supabase.from("farmers").insert(parsed.data).select().single());
+      const saved = farmer
+        ? await must<Farmer>(supabase.from("farmers").update(parsed.data).eq("id", farmer.id).select().single())
+        : await must<Farmer>(supabase.from("farmers").insert(parsed.data).select().single());
+      // New farmer, changed address, or no pin yet: put the pin on the address automatically.
+      const addrKey = (x: Partial<Farmer> | undefined) => [x?.address, x?.village, x?.district, x?.state, x?.postcode].map((v) => (v ?? "").trim()).join("|");
+      let pinned: "set" | "not_found" | "skipped" = "skipped";
+      if (!farmer || addrKey(farmer) !== addrKey(saved) || saved.lat === null) {
+        try {
+          const hit = await geocodeFarmerAddress(saved);
+          if (hit) {
+            await rpc("verify_farmer_location", { p_farmer: saved.id, p_lat: hit.lat, p_lon: hit.lon, p_source: hit.source });
+            pinned = "set";
+          } else pinned = "not_found";
+        } catch {
+          pinned = "not_found";
+        }
+      }
+      return { row: saved, pinned };
     },
-    onSuccess: (row) => {
-      if (!row) return;
+    onSuccess: (res) => {
+      if (!res) return;
+      const row = res.row;
       qc.invalidateQueries({ queryKey: ["farmers"] });
       qc.invalidateQueries({ queryKey: ["farmer", row.id] });
       qc.invalidateQueries({ queryKey: ["farmer-options"] });
-      toast("ok", farmer ? "Farmer updated." : "Farmer added. Set the map pin next.");
+      toast(
+        res.pinned === "not_found" ? "info" : "ok",
+        `${farmer ? "Farmer updated." : "Farmer added."}${res.pinned === "set" ? " Map pin set from the address." : res.pinned === "not_found" ? " Couldn't find this address on the map — add a landmark/PIN code or set the pin manually." : ""}`,
+      );
       onClose();
       if (!farmer) nav(`/admin/farmers/${row.id}`);
     },

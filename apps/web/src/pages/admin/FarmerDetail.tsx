@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -17,6 +17,7 @@ import {
   type Visit,
 } from "@kisanroute/shared";
 import { supabase } from "../../lib/supabase";
+import { geocodeFarmerAddress } from "../../lib/googlePlaces";
 import { must, rpc, ApiError } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 import { getBrowserFix, useIdempotencyKey } from "../../lib/hooks";
@@ -80,6 +81,32 @@ export default function FarmerDetail() {
     }
     verify.mutate(c);
   };
+
+  const fromAddress = useMutation({
+    mutationFn: async () => {
+      const fd = farmer.data!;
+      const hit = await geocodeFarmerAddress(fd);
+      if (!hit) throw new ApiError({ code: "validation", message: "Couldn't find this address on the map. Add a landmark or PIN code to the address, or place the pin manually." });
+      await rpc("verify_farmer_location", { p_farmer: fd.id, p_lat: hit.lat, p_lon: hit.lon, p_source: hit.source });
+      return hit;
+    },
+    onSuccess: (hit) => {
+      setCandidate(null);
+      qc.invalidateQueries({ queryKey: ["farmer", id] });
+      qc.invalidateQueries({ queryKey: ["farmer-options"] });
+      toast("ok", `Map pin set from the address (${hit.label}). Open visits use it now.`);
+    },
+    onError: (e: ApiError) => toast("error", e.message),
+  });
+  // A farmer without a pin gets one from the address automatically when the page opens.
+  const autoTried = useRef(false);
+  useEffect(() => {
+    const fd = farmer.data;
+    if (!fd || autoTried.current || fd.lat !== null || !(fd.address || fd.village)) return;
+    autoTried.current = true;
+    fromAddress.mutate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [farmer.data]);
 
   const verify = useMutation({
     mutationFn: (c: { lat: number; lon: number; source: string }) => rpc<Farmer>("verify_farmer_location", { p_farmer: id, p_lat: c.lat, p_lon: c.lon, p_source: c.source }),
@@ -155,6 +182,7 @@ export default function FarmerDetail() {
             legend={<span className="small">Search to move the map, then <strong>click/tap the exact farm spot</strong> to place the pin. Searching never changes the saved pin.</span>}
           />
           <div className="row">
+            <Button onClick={() => fromAddress.mutate()} busy={fromAddress.isPending}>📍 Set pin from address</Button>
             <Button variant="secondary" onClick={async () => { const fix = await getBrowserFix(); if (!fix) toast("error", "Couldn't get your location (permission denied or no GPS)."); else setCandidate({ lat: fix.lat, lon: fix.lon, source: `device_gps_${Math.round(fix.accuracy_m)}m` }); }}>
               Use my current location
             </Button>
