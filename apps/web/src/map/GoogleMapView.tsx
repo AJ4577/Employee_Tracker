@@ -67,6 +67,60 @@ function PinMarker({ m, onClick }: { m: MapMarker; onClick: () => void }) {
   );
 }
 
+/** Always-visible HTML label anchored to a map position (OverlayView; no Map ID needed). */
+function TagOverlay({ lat, lon, text, dark }: { lat: number; lon: number; text: string; dark: boolean }) {
+  const map = useMap();
+  const loaded = useApiIsLoaded();
+  const ref = useRef<{ setPos: (lat: number, lon: number, text: string) => void; remove: () => void } | null>(null);
+
+  useEffect(() => {
+    if (!map || !loaded || typeof google === "undefined") return;
+    class Tag extends google.maps.OverlayView {
+      div = document.createElement("div");
+      pos = new google.maps.LatLng(lat, lon);
+      onAdd() {
+        this.div.className = dark ? "map-tag map-tag-dark" : "map-tag";
+        this.getPanes()!.floatPane.appendChild(this.div);
+      }
+      draw() {
+        const p = this.getProjection()?.fromLatLngToDivPixel(this.pos);
+        if (!p) return;
+        this.div.style.left = `${p.x}px`;
+        this.div.style.top = `${p.y}px`;
+      }
+      onRemove() {
+        this.div.remove();
+      }
+    }
+    const tag = new Tag();
+    tag.setMap(map);
+    ref.current = {
+      setPos: (la, lo, tx) => {
+        tag.pos = new google.maps.LatLng(la, lo);
+        tag.div.textContent = "";
+        tx.split("\n").forEach((line, i) => {
+          const el = document.createElement(i === 0 ? "strong" : "span");
+          el.textContent = line;
+          tag.div.appendChild(el);
+        });
+        tag.draw();
+      },
+      remove: () => tag.setMap(null),
+    };
+    ref.current.setPos(lat, lon, text);
+    return () => {
+      ref.current?.remove();
+      ref.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map, loaded, dark]);
+
+  useEffect(() => {
+    ref.current?.setPos(lat, lon, text);
+  }, [lat, lon, text]);
+  return null;
+}
+
 /** Fit to markers/routes, or center on a given point. Re-runs only when the content actually changes. */
 function FitTo({ markers, routes, center, zoom, fitKey }: Pick<MapProps, "markers" | "routes" | "center" | "zoom" | "fitKey">) {
   const map = useMap();
@@ -315,6 +369,9 @@ export function GoogleMapView({ markers = [], routes, center, zoom, height = 360
           <AccuracyCircles markers={all} />
           {all.map((m) => (
             <PinMarker key={m.id} m={m} onClick={() => setOpenInfo(m.id)} />
+          ))}
+          {all.filter((m) => m.tag).map((m) => (
+            <TagOverlay key={`tag-${m.id}`} lat={m.lat} lon={m.lon} text={m.tag!} dark={m.tagStyle === "dark"} />
           ))}
           {info ? (
             <InfoWindow position={{ lat: info.lat, lng: info.lon }} pixelOffset={[0, -30]} onCloseClick={() => setOpenInfo(null)}>

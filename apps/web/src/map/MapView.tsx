@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { MapContainer, TileLayer, Marker, Popup, Polyline, Circle, useMap, useMapEvents } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Polyline, Circle, Tooltip, useMap, useMapEvents } from "react-leaflet";
 import L, { type LatLngExpression } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useAuth } from "../lib/auth";
@@ -113,6 +113,11 @@ function LeafletMapView({ markers = [], routes, center, zoom, height = 360, onPi
         {all.map((m) => (
           <Marker key={m.id} position={[m.lat, m.lon]} icon={icon(m.kind, m.label, m.badge)} title={m.label} alt={m.label}>
             <Popup>{m.popup ?? <strong>{m.label}</strong>}</Popup>
+            {m.tag ? (
+              <Tooltip permanent direction="top" offset={[0, -24]} className={m.tagStyle === "dark" ? "map-tag map-tag-dark" : "map-tag"}>
+                {m.tag.split("\n").map((line, i) => (i === 0 ? <strong key={i}>{line}</strong> : <span key={i}>{line}</span>))}
+              </Tooltip>
+            ) : null}
           </Marker>
         ))}
         {all

@@ -8,6 +8,10 @@ export interface MapMarker {
   kind: "farmer" | "farmer-approx" | "staff-live" | "staff-stale" | "staff-last" | "search" | "me" | "pick" | "stop" | "vehicle" | "start" | "end" | "walk" | "bike" | "car";
   /** Short text drawn on the marker, e.g. a stop number. */
   badge?: string;
+  /** Always-visible label above the marker (e.g. time). Lines separated by "\n". */
+  tag?: string;
+  /** "dark" = black playback box, "light" = small white time chip. */
+  tagStyle?: "dark" | "light";
   accuracy_m?: number | null;
   popup?: ReactNode;
 }

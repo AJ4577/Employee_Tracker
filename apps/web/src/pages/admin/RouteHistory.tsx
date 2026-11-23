@@ -175,11 +175,12 @@ export function RouteHistory({ points, visits, events, tz, fitKey, liveMarker, s
   }, [points, t, tripModes]);
   const first = points[0];
   const lastPt = points.at(-1);
+  const hm = (ms: number) => formatInTz(new Date(ms).toISOString(), tz, { day: undefined, month: undefined, hour: "2-digit", minute: "2-digit" });
   const clock = (ms: number) => formatInTz(new Date(ms).toISOString(), tz, { day: undefined, month: undefined, second: "2-digit" });
 
   const markers: MapMarker[] = [
-    ...(first ? [{ id: "start", lat: first.lat, lon: first.lon, label: "Start", kind: "start" as const, badge: "S", popup: <div><strong>Start</strong><br />{clock(first.t)}</div> }] : []),
-    ...(lastPt && points.length > 1 ? [{ id: "end", lat: lastPt.lat, lon: lastPt.lon, label: "Last point", kind: "end" as const, badge: "E", popup: <div><strong>Last point</strong><br />{clock(lastPt.t)}</div> }] : []),
+    ...(first ? [{ id: "start", lat: first.lat, lon: first.lon, label: "Start", kind: "start" as const, badge: "S", tag: `Start ${hm(first.t)}`, popup: <div><strong>Start</strong><br />{clock(first.t)}</div> }] : []),
+    ...(lastPt && points.length > 1 ? [{ id: "end", lat: lastPt.lat, lon: lastPt.lon, label: "Last point", kind: "end" as const, badge: "E", tag: `Last ${hm(lastPt.t)}`, popup: <div><strong>Last point</strong><br />{clock(lastPt.t)}</div> }] : []),
     ...visits
       .filter((v) => v.target_lat !== null)
       .map((v) => ({ id: `v-${v.id}`, lat: v.target_lat!, lon: v.target_lon!, label: v.farmer_name, kind: "farmer" as const })),
@@ -190,6 +191,7 @@ export function RouteHistory({ points, visits, events, tz, fitKey, liveMarker, s
       label: `Stop ${s.index}`,
       kind: "stop" as const,
       badge: String(s.index),
+      tag: `${s.index} · ${hm(s.arrive)}–${hm(s.depart)} (${formatHm(s.duration_s)})`,
       popup: (
         <div>
           <strong>Stop {s.index}</strong>
@@ -199,7 +201,17 @@ export function RouteHistory({ points, visits, events, tz, fitKey, liveMarker, s
         </div>
       ),
     })),
-    ...(showVehicle && frame ? [{ id: "vehicle", lat: frame.lat, lon: frame.lon, label: `Staff (${vehicleKind})${frame.estimated ? " — estimated position" : ""}`, kind: vehicleKind }] : liveMarker ? [liveMarker] : []),
+    ...(showVehicle && frame
+      ? [{
+          id: "vehicle",
+          lat: frame.lat,
+          lon: frame.lon,
+          label: `Staff (${vehicleKind})${frame.estimated ? " — estimated position" : ""}`,
+          kind: vehicleKind,
+          tagStyle: "dark" as const,
+          tag: `${formatInTz(new Date(frame.t).toISOString(), tz, { day: undefined, month: undefined, hour: "2-digit", minute: "2-digit" })}\n${formatInTz(new Date(frame.t).toISOString(), tz, { weekday: "short", day: "2-digit", month: "short", hour: undefined, minute: undefined })}\n${frame.estimated ? "estimated road" : frame.inGap ? "no GPS data" : `${frame.speed_kmh ?? 0} km/h`} · ${formatDistance(frame.travelled_m)}`,
+        }]
+      : liveMarker ? [liveMarker] : []),
   ];
 
   if (!points.length) {
