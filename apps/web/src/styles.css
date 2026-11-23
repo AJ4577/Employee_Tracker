@@ -344,3 +344,15 @@ input[type="checkbox"] { width: 20px; height: 20px; min-height: 0; accent-color:
 .pin-vehicle { background: #111827; width: 22px; height: 22px; }
 .pin-badge { color: #fff; font: 700 11px system-ui, sans-serif; }
 @media (max-width: 1024px) { .route-body { grid-template-columns: 1fr; } .route-timeline { max-height: none; } }
+
+.pin-start, .pin-end { border-radius: 50%; transform: none; display: flex; align-items: center; justify-content: center; }
+.pin-start { background: #16a34a; }
+.pin-end { background: #dc2626; }
+.route-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--muted); margin: 6px 0; }
+.route-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.lg-line { width: 26px; height: 5px; border-radius: 3px; background: #1a73e8; display: inline-block; }
+.lg-gap { width: 26px; height: 0; border-top: 3px dotted #6b7280; display: inline-block; }
+.lg-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+.lg-start { background: #16a34a; }
+.lg-end { background: #dc2626; }
+.lg-stop { background: #c2410c; }

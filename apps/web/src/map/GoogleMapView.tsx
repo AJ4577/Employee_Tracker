@@ -19,11 +19,13 @@ const COLORS: Record<MapMarker["kind"], string> = {
   pick: "#6b21a8",
   stop: "#c2410c",
   vehicle: "#111827",
+  start: "#16a34a",
+  end: "#dc2626",
 };
 
 function pinIcon(kind: MapMarker["kind"]): google.maps.Icon {
   const c = COLORS[kind];
-  const round = kind.startsWith("staff") || kind === "me" || kind === "stop" || kind === "vehicle";
+  const round = kind.startsWith("staff") || kind === "me" || kind === "stop" || kind === "vehicle" || kind === "start" || kind === "end";
   const svg = round
     ? `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26"><circle cx="13" cy="13" r="10" fill="${c}" stroke="#fff" stroke-width="3"/></svg>`
     : `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="38" viewBox="0 0 28 38"><path d="M14 1C7 1 1.5 6.4 1.5 13.3 1.5 23 14 37 14 37s12.5-14 12.5-23.7C26.5 6.4 21 1 14 1z" fill="${c}" stroke="#fff" stroke-width="2.5"/><circle cx="14" cy="13.5" r="4.5" fill="#fff"/></svg>`;
@@ -78,24 +80,43 @@ function FitTo({ markers, routes, center, zoom, fitKey }: Pick<MapProps, "marker
 }
 
 /** Recorded GPS trail: one polyline per segment, never joined across gaps. */
-function Routes({ routes }: { routes?: [number, number][][] }) {
+function Routes({ routes, gapLines }: { routes?: [number, number][][]; gapLines?: [number, number][][] }) {
   const map = useMap();
   useEffect(() => {
-    if (!map || !routes) return;
-    const lines = routes
-      .filter((r) => r.length > 1)
-      .map(
-        (r) =>
-          new google.maps.Polyline({
-            map,
-            path: r.map(([lat, lng]) => ({ lat, lng })),
-            strokeColor: "#1f6f3a",
-            strokeOpacity: 0.9,
-            strokeWeight: 4,
-          }),
+    if (!map) return;
+    const lines: google.maps.Polyline[] = [];
+    for (const r of routes ?? []) {
+      if (r.length < 2) continue;
+      const path = r.map(([lat, lng]) => ({ lat, lng }));
+      // White casing under a bold blue line with direction arrows: readable on map and satellite.
+      lines.push(new google.maps.Polyline({ map, path, strokeColor: "#ffffff", strokeOpacity: 0.95, strokeWeight: 9, zIndex: 1, clickable: false }));
+      lines.push(
+        new google.maps.Polyline({
+          map,
+          path,
+          strokeColor: "#1a73e8",
+          strokeOpacity: 1,
+          strokeWeight: 5,
+          zIndex: 2,
+          clickable: false,
+          icons: [{ icon: { path: google.maps.SymbolPath.FORWARD_OPEN_ARROW, scale: 2.4, strokeColor: "#ffffff", strokeWeight: 2 }, offset: "50px", repeat: "110px" }],
+        }),
       );
+    }
+    for (const gl of gapLines ?? []) {
+      lines.push(
+        new google.maps.Polyline({
+          map,
+          path: gl.map(([lat, lng]) => ({ lat, lng })),
+          strokeOpacity: 0,
+          zIndex: 1,
+          clickable: false,
+          icons: [{ icon: { path: "M 0,-1 0,1", strokeOpacity: 0.85, strokeColor: "#6b7280", scale: 3 }, offset: "0", repeat: "14px" }],
+        }),
+      );
+    }
     return () => lines.forEach((l) => l.setMap(null));
-  }, [map, routes]);
+  }, [map, routes, gapLines]);
   return null;
 }
 
@@ -194,7 +215,7 @@ function GoogleSearch({ localSearch, onSelect }: { localSearch?: (q: string) => 
   );
 }
 
-export function GoogleMapView({ markers = [], routes, center, zoom, height = 360, onPick, localSearch, searchable = true, title = "Map", legend, fitKey }: MapProps) {
+export function GoogleMapView({ markers = [], routes, center, zoom, height = 360, onPick, localSearch, searchable = true, title = "Map", legend, fitKey, gapLines }: MapProps) {
   const [full, setFull] = useState(false);
   const [searchPin, setSearchPin] = useState<LocalSearchResult | null>(null);
   const [openInfo, setOpenInfo] = useState<string | null>(null);
@@ -242,7 +263,7 @@ export function GoogleMapView({ markers = [], routes, center, zoom, height = 360
         >
           <FitTo markers={markers} routes={routes} center={center} zoom={zoom} fitKey={fitKey} />
           <Recenter to={searchPin} />
-          <Routes routes={routes} />
+          <Routes routes={routes} gapLines={gapLines} />
           <AccuracyCircles markers={all} />
           {all.map((m) => (
             <PinMarker key={m.id} m={m} onClick={() => setOpenInfo(m.id)} />

@@ -66,7 +66,7 @@ export function MapView(props: MapProps) {
   return hasGoogleMaps ? <GoogleMapView {...props} /> : <LeafletMapView {...props} />;
 }
 
-function LeafletMapView({ markers = [], routes, center, zoom, height = 360, onPick, localSearch, searchable = true, title = "Map", legend, fitKey }: MapProps) {
+function LeafletMapView({ markers = [], routes, center, zoom, height = 360, onPick, localSearch, searchable = true, title = "Map", legend, fitKey, gapLines }: MapProps) {
   const { settings } = useAuth();
   const [full, setFull] = useState(false);
   const [searchPin, setSearchPin] = useState<LocalSearchResult | null>(null);
@@ -100,7 +100,10 @@ function LeafletMapView({ markers = [], routes, center, zoom, height = 360, onPi
         <Resize dep={full} />
         <PickHandler onPick={onPick} />
         {(routes ?? []).filter((r) => r.length > 1).map((r, i) => (
-          <Polyline key={`r${i}`} positions={r as LatLngExpression[]} pathOptions={{ color: "#1f6f3a", weight: 4, opacity: 0.85 }} />
+          <Polyline key={`r${i}`} positions={r as LatLngExpression[]} pathOptions={{ color: "#1a73e8", weight: 6, opacity: 0.95 }} />
+        ))}
+        {(gapLines ?? []).map((gl, i) => (
+          <Polyline key={`g${i}`} positions={gl as LatLngExpression[]} pathOptions={{ color: "#6b7280", weight: 3, opacity: 0.85, dashArray: "4 8" }} />
         ))}
         {all.map((m) => (
           <Marker key={m.id} position={[m.lat, m.lon]} icon={icon(m.kind, m.label, m.badge)} title={m.label} alt={m.label}>

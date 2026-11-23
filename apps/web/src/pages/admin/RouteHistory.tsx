@@ -93,7 +93,23 @@ export function RouteHistory({ points, visits, events, tz, fitKey, liveMarker, s
   const frame = points.length ? frameAt(points, t) : null;
   const showVehicle = points.length > 0 && (playing || t > t0);
 
+  // Dotted connectors between recorded stretches (data gaps / trip changes); not a travelled road.
+  const gapLines = useMemo(() => {
+    const out: [number, number][][] = [];
+    for (let i = 1; i < segments.length; i++) {
+      const a = segments[i - 1]!.at(-1);
+      const b = segments[i]![0];
+      if (a && b) out.push([a, b]);
+    }
+    return out;
+  }, [segments]);
+  const first = points[0];
+  const lastPt = points.at(-1);
+  const clock = (ms: number) => formatInTz(new Date(ms).toISOString(), tz, { day: undefined, month: undefined, second: "2-digit" });
+
   const markers: MapMarker[] = [
+    ...(first ? [{ id: "start", lat: first.lat, lon: first.lon, label: "Start", kind: "start" as const, badge: "S", popup: <div><strong>Start</strong><br />{clock(first.t)}</div> }] : []),
+    ...(lastPt && points.length > 1 ? [{ id: "end", lat: lastPt.lat, lon: lastPt.lon, label: "Last point", kind: "end" as const, badge: "E", popup: <div><strong>Last point</strong><br />{clock(lastPt.t)}</div> }] : []),
     ...visits
       .filter((v) => v.target_lat !== null)
       .map((v) => ({ id: `v-${v.id}`, lat: v.target_lat!, lon: v.target_lon!, label: v.farmer_name, kind: "farmer" as const })),
@@ -134,7 +150,7 @@ export function RouteHistory({ points, visits, events, tz, fitKey, liveMarker, s
 
       <div className="route-body">
         <div className="route-map">
-          <MapView markers={markers} routes={segments} height={480} title="Route playback map" fitKey={fitKey} />
+          <MapView markers={markers} routes={segments} gapLines={gapLines} height={480} title="Route playback map" fitKey={fitKey} />
           <div className="playback" aria-label="Route playback">
             <Button className="btn-sm" onClick={() => { if (t >= t1) setT(t0); setPlaying((p) => !p); }} aria-label={playing ? "Pause" : "Play"}>
               {playing ? "⏸ Pause" : "▶ Play"}
@@ -150,7 +166,18 @@ export function RouteHistory({ points, visits, events, tz, fitKey, liveMarker, s
               <span>{formatDistance(frame?.travelled_m ?? 0)}</span>
             </div>
           </div>
-          <p className="small muted">Numbered orange markers are places the staff member stayed 5+ minutes. Playback moves only between real recorded points; during a data gap the marker waits at the last known point.</p>
+          <p className="route-legend small">
+            <span><i className="lg-line" /> Recorded route (arrows show direction)</span>
+            <span><i className="lg-gap" /> No GPS data, actual road not known</span>
+            <span><i className="lg-dot lg-start" /> Start</span>
+            <span><i className="lg-dot lg-end" /> Last point</span>
+            <span><i className="lg-dot lg-stop" /> Stopped 5+ min</span>
+          </p>
+          {analysis.gaps.length ? (
+            <p className="small text-warn">
+              {analysis.gaps.length} period(s) without location ({formatHm(analysis.gaps.reduce((sum, gp) => sum + (gp.to - gp.from) / 1000, 0))} in total). This happens when the staff page was closed, the phone was locked or GPS was off. For a continuous line the staff must keep KisanRoute open while travelling (or use the mobile app).
+            </p>
+          ) : null}
         </div>
 
         <ol className="route-timeline">

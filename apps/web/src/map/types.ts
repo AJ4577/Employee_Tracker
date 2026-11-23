@@ -5,7 +5,7 @@ export interface MapMarker {
   lat: number;
   lon: number;
   label: string;
-  kind: "farmer" | "farmer-approx" | "staff-live" | "staff-stale" | "staff-last" | "search" | "me" | "pick" | "stop" | "vehicle";
+  kind: "farmer" | "farmer-approx" | "staff-live" | "staff-stale" | "staff-last" | "search" | "me" | "pick" | "stop" | "vehicle" | "start" | "end";
   /** Short text drawn on the marker, e.g. a stop number. */
   badge?: string;
   accuracy_m?: number | null;
@@ -35,6 +35,8 @@ export interface MapProps {
   searchable?: boolean;
   title?: string;
   legend?: ReactNode;
+  /** Connectors across periods with no GPS data; drawn dotted grey and never as a travelled road. */
+  gapLines?: [number, number][][];
   /** When set, the map only re-fits when this changes (e.g. during playback a moving marker must not refit). */
   fitKey?: string;
 }
