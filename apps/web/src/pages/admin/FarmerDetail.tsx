@@ -165,8 +165,17 @@ export default function FarmerDetail() {
               </>
             ) : f.lat !== null && !f.location_verified ? (
               <Button onClick={() => confirmPin({ lat: f.lat!, lon: f.lon!, source: f.geocode_source ?? "admin_pin" })} busy={verify.isPending}>Confirm current pin</Button>
-            ) : null}
+            ) : (
+              <Button disabled title="Click the farm spot on the map first">Confirm pin</Button>
+            )}
           </div>
+          {!candidate ? (
+            <p className="small muted">
+              {f.lat === null ? "Step 1: click the exact farm spot on the map (or use “Set farm pin here” on a search result). Step 2: press Confirm pin." : "To change the pin: click the new farm spot on the map (or “Set farm pin here” on a search result), then press Confirm pin."}
+            </p>
+          ) : (
+            <p className="small"><strong>New pin placed.</strong> Press <strong>Confirm pin</strong> to save it.</p>
+          )}
         </Section>
       </div>
       <Section title="Purchase history">
