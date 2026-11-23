@@ -166,6 +166,23 @@ test("confirming a farmer pin updates visits already on the way", async () => {
   await staff(w.amit, (tx) => rpc(tx, `public.end_duty()`));
 });
 
+test("follow-up visits take the farmer pin when the parent visit had none", async () => {
+  await staff(w.amit, (tx) => rpc(tx, `public.start_duty('tracking')`));
+  await db.query(`select set_config('kisanroute.verifying_location', 'on', false)`);
+  await db.query(`update public.farmers set lat = null, lon = null, location_verified = false where id = $1`, [w.farmerA2]);
+  await db.query(`select set_config('kisanroute.verifying_location', 'off', false)`);
+  const id = await newVisit(w.amit, w.farmerA2);
+  await staff(w.amit, (tx) => rpc(tx, `public.staff_start_visit($1, $2)`, [id, uuid()]));
+  await staff(w.amit, (tx) => rpc(tx, `public.staff_arrive_visit($1, $2, null, null, null, null, 'no pin yet')`, [id, uuid()]));
+  await db.query(`select set_config('kisanroute.verifying_location', 'on', false)`);
+  await db.query(`update public.farmers set lat = 18.8, lon = 73.9, location_verified = true where id = $1`, [w.farmerA2]);
+  await db.query(`select set_config('kisanroute.verifying_location', 'off', false)`);
+  const done = await staff(w.amit, (tx) => rpc(tx, `public.staff_complete_visit($1, $2, $3::jsonb)`, [id, uuid(), JSON.stringify({ outcome_text: "ok done", next_followup_at: new Date(Date.now() + 86400e3).toISOString() })]));
+  const f = await db.query<any>(`select target_lat from public.visits where id = $1`, [done.follow_up_visit_id]);
+  expect(f.rows[0].target_lat).toBe(18.8);
+  await staff(w.amit, (tx) => rpc(tx, `public.end_duty()`));
+});
+
 describe("purchases", () => {
   test("totals computed server-side with price snapshot; idempotent", async () => {
     const key = uuid();

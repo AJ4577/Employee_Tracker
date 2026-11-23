@@ -73,7 +73,7 @@ export function VisitScreen({ id, onBack }: { id: string; onBack: () => void }) 
 
   const v = d.visit;
   const f = d.farmer;
-  const pin = v.target_lat !== null ? { lat: v.target_lat, lon: v.target_lon! } : null;
+  const pin = v.target_lat !== null ? { lat: v.target_lat, lon: v.target_lon! } : f.lat !== null && f.lon !== null ? { lat: f.lat, lon: f.lon } : null;
   const returnTrip = d.trips.find((t) => t.leg === "return" && t.status !== "abandoned");
   const addr = [f.address, f.village, f.district, f.state, f.postcode].filter(Boolean).join(", ");
   const has = (k: string) => pending.includes(k);
