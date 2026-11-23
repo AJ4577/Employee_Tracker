@@ -59,15 +59,16 @@ export default function StaffVisit() {
   });
 
   const act = async (action: Action) => {
+    const fix = await getBrowserFix();
     if (action === "start" && !me?.duty) {
       try {
-        await rpc("start_duty", { p_mode: "limited" });
+        // Share live location during the trip when the browser gives us a position.
+        await rpc("start_duty", { p_mode: fix ? "tracking" : "limited" });
         await refreshMe();
       } catch (e) {
         return toast("error", (e as Error).message);
       }
     }
-    const fix = await getBrowserFix();
     if (!fix && action === "arrive") toast("info", "Location unavailable — you'll be asked for a reason.");
     run.mutate({ action, key: newIdempotencyKey(), fix });
   };

@@ -3,41 +3,83 @@ import { Link } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { dayRangeInTz, formatInTz, TASK_TYPE_LABEL, type MyVisitListItem } from "@kisanroute/shared";
 import { rpc, ApiError } from "../../lib/api";
+import { getBrowserFix } from "../../lib/hooks";
+import { useWebTracking } from "../../lib/webTracking";
 import { useAuth } from "../../lib/auth";
 import { useToast } from "../../ui/toast";
 import { Section } from "../../ui/Layout";
 import { Banner, Button, Empty, ErrorState, Loading, PageHeader, StatusBadge } from "../../ui/ui";
 
 export function DutyCard() {
-  const { me, tz, refreshMe } = useAuth();
+  const { me, tz, settings, refreshMe } = useAuth();
+  const track = useWebTracking();
   const toast = useToast();
+  // Ask for location first; share live location only if the browser grants it.
   const start = useMutation({
-    mutationFn: () => rpc("start_duty", { p_mode: "limited" }),
-    onSuccess: () => { refreshMe(); toast("ok", "Duty started (browser mode)."); },
+    mutationFn: async () => {
+      const fix = await getBrowserFix();
+      await rpc("start_duty", { p_mode: fix ? "tracking" : "limited" });
+      return !!fix;
+    },
+    onSuccess: (shared) => {
+      refreshMe();
+      toast(shared ? "ok" : "info", shared ? "Duty started. Live location is on while this page stays open." : "Duty started without live location (permission denied or no GPS).");
+    },
+    onError: (e: ApiError) => toast("error", e.message),
+  });
+  const setMode = useMutation({
+    mutationFn: async (mode: "tracking" | "limited") => {
+      if (mode === "tracking" && !(await getBrowserFix())) throw new ApiError({ code: "validation", message: "Location permission is blocked or GPS is off. Allow location for this site and try again." });
+      await rpc("start_duty", { p_mode: mode });
+    },
+    onSuccess: () => refreshMe(),
     onError: (e: ApiError) => toast("error", e.message),
   });
   const end = useMutation({
     mutationFn: () => rpc("end_duty"),
-    onSuccess: () => { refreshMe(); toast("ok", "Duty ended."); },
+    onSuccess: () => { refreshMe(); toast("ok", "Duty ended. Location sharing stopped."); },
     onError: (e: ApiError) => toast("error", e.message),
   });
   const d = me?.duty;
+  const poor = track.accuracyM !== null && track.accuracyM > settings.low_accuracy_m;
   return (
     <Section title="Duty">
       {d ? (
         <>
           <p>
-            <span className={`badge ${d.mode === "tracking" ? "fresh-live" : "fresh-stale"}`}><span className="dot" aria-hidden />{d.mode === "tracking" ? "On duty · tracking on (mobile app)" : "On duty · location only at actions"}</span>
+            <span className={`badge ${d.mode === "tracking" ? "fresh-live" : "fresh-stale"}`}><span className="dot" aria-hidden />{d.mode === "tracking" ? "On duty · live location on" : "On duty · live location off"}</span>
           </p>
           <p className="small muted">Since {formatInTz(d.started_at, tz)}</p>
+          {d.mode === "tracking" ? (
+            <>
+              <Banner kind="info">Keep this page open with the screen on. Location stops if you close the browser, lock the phone or switch apps.</Banner>
+              <p className="small">
+                {track.state === "denied" ? <span className="text-danger">Location permission is blocked for this site. Allow it in the browser settings.</span>
+                  : track.lastFixAt ? <>Last location {formatInTz(track.lastFixAt, tz, { second: "2-digit" })}{track.accuracyM !== null ? ` · accuracy ±${Math.round(track.accuracyM)} m` : ""}{track.lastSyncAt ? ` · sent ${formatInTz(track.lastSyncAt, tz, { day: undefined, month: undefined, second: "2-digit" })}` : ""}{track.pending ? ` · ${track.pending} waiting to send` : ""}</>
+                  : "Waiting for your location…"}
+              </p>
+              {poor ? <Banner kind="warn">Your location is approximate (±{Math.round(track.accuracyM!)} m). Use a phone with Location ON and “Precise / High accuracy” enabled — laptops guess location from Wi‑Fi and can be kilometres off.</Banner> : null}
+              <div className="row">
+                <Button variant="secondary" onClick={() => setMode.mutate("limited")} busy={setMode.isPending}>Stop sharing location</Button>
+                <Button variant="secondary" onClick={() => end.mutate()} busy={end.isPending}>End duty</Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="small muted">Your admin can't see your live position.</p>
+              <div className="row">
+                <Button onClick={() => setMode.mutate("tracking")} busy={setMode.isPending}>Share live location</Button>
+                <Button variant="secondary" onClick={() => end.mutate()} busy={end.isPending}>End duty</Button>
+              </div>
+            </>
+          )}
           {me?.active_trip ? <Banner kind="info">Trip in progress ({me.active_trip.leg}). Finish it from the visit page.</Banner> : null}
-          <Button variant="secondary" onClick={() => end.mutate()} busy={end.isPending}>End duty</Button>
         </>
       ) : (
         <>
           <p>You're off duty. No location is collected.</p>
-          <Banner kind="info">For continuous trip tracking (phone locked / app closed), use the KisanRoute Staff mobile app. In the browser, your location is captured only when you tap Start trip or Mark arrived.</Banner>
-          <Button onClick={() => start.mutate()} busy={start.isPending}>Start duty (browser)</Button>
+          <Banner kind="info">Starting duty shares your live location with your admin while this page is open. It stops when you end duty. For tracking with the phone locked, use the KisanRoute Staff mobile app.</Banner>
+          <Button onClick={() => start.mutate()} busy={start.isPending}>Start duty</Button>
         </>
       )}
     </Section>

@@ -7,6 +7,7 @@ import { Banner, Button, Loading } from "./ui/ui";
 import { AcceptInvitePage, LoginPage, MfaPage, PendingApprovalPage, RegisterPage } from "./pages/auth/AuthPages";
 import { ApiError } from "./lib/api";
 import { NotificationsPage } from "./pages/Notifications";
+import { WebTrackerProvider } from "./lib/webTracking";
 
 const Overview = lazy(() => import("./pages/admin/Overview"));
 const Visits = lazy(() => import("./pages/admin/Visits"));
@@ -105,7 +106,9 @@ export function App() {
           path="/staff"
           element={
             <Gate need="staff">
-              <AppLayout nav={STAFF_NAV} bottomNav />
+              <WebTrackerProvider>
+                <AppLayout nav={STAFF_NAV} bottomNav />
+              </WebTrackerProvider>
             </Gate>
           }
         >
