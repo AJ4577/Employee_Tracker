@@ -145,6 +145,16 @@ describe("full visit lifecycle", () => {
   });
 });
 
+test("confirming a farmer pin updates visits already on the way", async () => {
+  await staff(w.amit, (tx) => rpc(tx, `public.start_duty('tracking')`));
+  const id = await newVisit(w.amit, w.farmerA2); // farmer A2 has no pin
+  await staff(w.amit, (tx) => rpc(tx, `public.staff_start_visit($1, $2)`, [id, uuid()]));
+  await as(db, admin(w.adminA), (tx) => rpc(tx, `public.verify_farmer_location($1, 18.70, 73.60)`, [w.farmerA2]));
+  const v = await db.query<any>(`select status, target_lat from public.visits where id = $1`, [id]);
+  expect(v.rows[0]).toEqual({ status: "in_progress", target_lat: 18.7 });
+  await staff(w.amit, (tx) => rpc(tx, `public.end_duty()`));
+});
+
 describe("purchases", () => {
   test("totals computed server-side with price snapshot; idempotent", async () => {
     const key = uuid();

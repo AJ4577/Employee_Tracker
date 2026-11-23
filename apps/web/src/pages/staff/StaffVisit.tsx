@@ -6,6 +6,7 @@ import {
   fieldErrors,
   formatDistance,
   formatInTz,
+  googleDirectionsToAddressUrl,
   googleDirectionsUrl,
   outcomeInput,
   TASK_TYPE_LABEL,
@@ -88,7 +89,11 @@ export default function StaffVisit() {
 
       <div className="action-bar">
         {f.phone ? <a className="btn btn-secondary" href={`tel:${f.phone}`}>📞 Call</a> : null}
-        {pin ? <a className="btn btn-secondary" href={googleDirectionsUrl(pin)} target="_blank" rel="noopener noreferrer">🧭 Get directions</a> : null}
+        {pin ? (
+          <a className="btn btn-secondary" href={googleDirectionsUrl(pin)} target="_blank" rel="noopener noreferrer">🧭 Get directions</a>
+        ) : addr ? (
+          <a className="btn btn-secondary" href={googleDirectionsToAddressUrl(addr)} target="_blank" rel="noopener noreferrer" title="No farm pin yet — Google will route to its best match for the address">🧭 Directions (by address)</a>
+        ) : null}
         {["assigned", "rescheduled"].includes(v.status) ? <Button onClick={() => act("start")} busy={busy}>Start trip</Button> : null}
         {v.status === "in_progress" ? <Button onClick={() => act("arrive")} busy={busy}>Mark arrived</Button> : null}
         {v.status === "arrived" ? <Button onClick={() => setCompleting(true)}>Complete meeting</Button> : null}
@@ -104,7 +109,7 @@ export default function StaffVisit() {
               <MapView height={320} center={[pin.lat, pin.lon]} markers={[{ id: "farm", lat: pin.lat, lon: pin.lon, label: f.name, kind: f.location_verified ? "farmer" : "farmer-approx", popup: <div><strong>{f.name}</strong><br />{addr}</div> }]} title="Farm map" />
             </>
           ) : (
-            <Banner kind="warn">No map pin for this farmer yet. Use the address below or call the farmer; ask your admin to set the pin.</Banner>
+            <Banner kind="warn">No map pin for this farmer yet. “Directions (by address)” goes to Google's best match for the address, which may not be the exact farm — call the farmer to confirm, and ask your admin to set the pin.</Banner>
           )}
           <p className="small">{addr || "No address recorded."}</p>
         </Section>

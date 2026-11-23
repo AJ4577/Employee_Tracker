@@ -7,6 +7,7 @@ import {
   evaluateGeofence,
   formatDistance,
   formatInTz,
+  googleDirectionsToAddressUrl,
   googleDirectionsUrl,
   outcomeInput,
   TASK_TYPE_LABEL,
@@ -126,7 +127,8 @@ export function VisitScreen({ id, onBack }: { id: string; onBack: () => void }) 
 
       <View style={[s.row, { marginBottom: 12 }]}>
         {f.phone ? <Button title="📞 Call" variant="secondary" onPress={() => Linking.openURL(`tel:${f.phone}`)} style={{ flex: 1 }} /> : null}
-        {pin ? <Button title="🧭 Directions" variant="secondary" onPress={() => Linking.openURL(googleDirectionsUrl(pin, fix))} style={{ flex: 1 }} /> : null}
+        {pin ? <Button title="🧭 Directions" variant="secondary" onPress={() => Linking.openURL(googleDirectionsUrl(pin, fix))} style={{ flex: 1 }} />
+          : addr ? <Button title="🧭 Directions (address)" variant="secondary" onPress={() => Linking.openURL(googleDirectionsToAddressUrl(addr))} style={{ flex: 1 }} /> : null}
       </View>
       <View style={{ gap: 8, marginBottom: 12 }}>
         {(effective === "assigned" || effective === "rescheduled") ? <Button title="Start trip (leaving now)" onPress={() => run("start")} busy={busy} /> : null}
@@ -142,7 +144,7 @@ export function VisitScreen({ id, onBack }: { id: string; onBack: () => void }) 
             {!f.location_verified ? <Banner kind="warn">Approximate pin (not confirmed by admin). Confirm with the farmer.</Banner> : null}
             <MapWebView pin={{ ...pin, label: f.name, approximate: !f.location_verified }} me={fix} tileUrl={settings.map_tile_url} attribution={settings.map_tile_attribution} />
           </>
-        ) : <Banner kind="warn">No map pin yet. Use the address or call the farmer.</Banner>}
+        ) : <Banner kind="warn">No map pin yet. Address directions are approximate — call the farmer to confirm.</Banner>}
         <Text selectable>{addr || "No address recorded."}</Text>
       </Card>
 

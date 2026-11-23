@@ -103,6 +103,14 @@ export function formatDistance(m: number): string {
   return `${(m / 1000).toFixed(m < 10000 ? 1 : 0)} km`;
 }
 
+/**
+ * Directions to an address when the farm has no pin yet. Sends only the address text to Google;
+ * Google's match is approximate, so the app labels it that way.
+ */
+export function googleDirectionsToAddressUrl(address: string): string {
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}&travelmode=driving`;
+}
+
 /** Google Maps directions URL (no API key needed). Only coordinates leave the system. */
 export function googleDirectionsUrl(dest: LatLon, origin?: LatLon | null): string {
   // Built by hand (no URL class) so it works identically in browsers and React Native.
