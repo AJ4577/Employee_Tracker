@@ -12,13 +12,13 @@ import { Button, Empty, ErrorState, FreshnessBadge, KV, Loading, PageHeader, Sel
 import { staffMarkerKind, type MapMarker } from "../../map/MapView";
 import { RouteHistory } from "./RouteHistory";
 
-/** Split accepted points into segments at trip changes and gaps > 5 minutes (never join across gaps). */
+/** Split accepted points into segments at gaps > 5 minutes (never join across gaps). */
 export function segmentRoute(points: RoutePoint[], gapS = 300): [number, number][][] {
   const segs: [number, number][][] = [];
   let cur: [number, number][] = [];
   let prev: RoutePoint | null = null;
   for (const p of points) {
-    if (prev && (p[4] !== prev[4] || (Date.parse(p[3]) - Date.parse(prev[3])) / 1000 > gapS)) {
+    if (prev && (Date.parse(p[3]) - Date.parse(prev[3])) / 1000 > gapS) {
       if (cur.length) segs.push(cur);
       cur = [];
     }
@@ -80,7 +80,16 @@ export default function Tracking() {
     if (visitId) return new Set(trips.filter((t) => t.visit_id === visitId).map((t) => t.id));
     return null;
   }, [tripId, visitId, trips]);
-  const rawPoints = useMemo(() => (route.data?.points ?? []).filter((p) => !tripFilter || (p[4] !== null && tripFilter.has(p[4]))), [route.data, tripFilter]);
+  const rawPoints = useMemo(() => {
+    const seen = new Set<string>();
+    return (route.data?.points ?? []).filter((p) => {
+      if (tripFilter && !(p[4] !== null && tripFilter.has(p[4]))) return false;
+      const k = `${p[3]}|${p[0].toFixed(6)}|${p[1].toFixed(6)}`; // same fix sent twice (e.g. two tabs)
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+  }, [route.data, tripFilter]);
   const trackPoints: TrackPoint[] = useMemo(() => rawPoints.map((p) => ({ lat: p[0], lon: p[1], accuracy_m: p[2], t: Date.parse(p[3]), trip_id: p[4] })), [rawPoints]);
   const segments = useMemo(() => segmentRoute(rawPoints), [rawPoints]);
   const events = useMemo(() => (feed.data ?? []).filter((e) => !visitId || e.visit_id === visitId), [feed.data, visitId]);

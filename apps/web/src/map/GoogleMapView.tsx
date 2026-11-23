@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { APIProvider, InfoWindow, Map, Marker, useApiIsLoaded, useMap, useMapsLibrary } from "@vis.gl/react-google-maps";
 import { useDebounced } from "../lib/hooks";
+import { distanceMeters } from "@kisanroute/shared";
 import type { LocalSearchResult, MapMarker, MapProps } from "./types";
 
 const KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
@@ -80,6 +81,26 @@ function FitTo({ markers, routes, center, zoom, fitKey }: Pick<MapProps, "marker
 }
 
 /** Recorded GPS trail: one polyline per segment, never joined across gaps. */
+// Estimated road paths for data gaps, cached per endpoint pair (Routes API calls are billed).
+const gapRouteCache = new globalThis.Map<string, google.maps.LatLngLiteral[] | null>();
+const MAX_GAP_ROUTES = 25;
+
+async function estimatedRoad(a: [number, number], b: [number, number]): Promise<google.maps.LatLngLiteral[] | null> {
+  const key = `${a[0].toFixed(5)},${a[1].toFixed(5)}>${b[0].toFixed(5)},${b[1].toFixed(5)}`;
+  if (gapRouteCache.has(key)) return gapRouteCache.get(key)!;
+  let path: google.maps.LatLngLiteral[] | null = null;
+  try {
+    const { Route } = (await google.maps.importLibrary("routes")) as google.maps.RoutesLibrary;
+    const res = await Route.computeRoutes({ origin: { lat: a[0], lng: a[1] }, destination: { lat: b[0], lng: b[1] }, travelMode: "DRIVING", fields: ["path"] });
+    const pts = res.routes?.[0]?.path;
+    path = pts?.length ? pts.map((x) => ({ lat: x.lat, lng: x.lng })) : null;
+  } catch {
+    path = null; // Routes API unavailable: fall back to a straight dotted connector
+  }
+  gapRouteCache.set(key, path);
+  return path;
+}
+
 function Routes({ routes, gapLines }: { routes?: [number, number][][]; gapLines?: [number, number][][] }) {
   const map = useMap();
   useEffect(() => {
@@ -103,19 +124,37 @@ function Routes({ routes, gapLines }: { routes?: [number, number][][]; gapLines?
         }),
       );
     }
-    for (const gl of gapLines ?? []) {
-      lines.push(
-        new google.maps.Polyline({
-          map,
-          path: gl.map(([lat, lng]) => ({ lat, lng })),
-          strokeOpacity: 0,
-          zIndex: 1,
-          clickable: false,
-          icons: [{ icon: { path: "M 0,-1 0,1", strokeOpacity: 0.85, strokeColor: "#6b7280", scale: 3 }, offset: "0", repeat: "14px" }],
-        }),
-      );
-    }
-    return () => lines.forEach((l) => l.setMap(null));
+    let cancelled = false;
+    const dotted = (path: google.maps.LatLngLiteral[], estimated: boolean) =>
+      new google.maps.Polyline({
+        map,
+        path,
+        strokeOpacity: 0,
+        zIndex: 1,
+        clickable: false,
+        icons: [{ icon: { path: "M 0,-1 0,1", strokeOpacity: estimated ? 0.75 : 0.85, strokeColor: estimated ? "#9ca3af" : "#6b7280", scale: 3 }, offset: "0", repeat: estimated ? "12px" : "14px" }],
+      });
+    (gapLines ?? []).forEach((gl, i) => {
+      const a = gl[0]!;
+      const b = gl[gl.length - 1]!;
+      const straight = gl.map(([lat, lng]) => ({ lat, lng }));
+      if (i >= MAX_GAP_ROUTES || distanceMeters({ lat: a[0], lon: a[1] }, { lat: b[0], lon: b[1] }) <= 150) {
+        lines.push(dotted(straight, false));
+        return;
+      }
+      // Show the straight connector until the estimated road arrives, then swap it.
+      const placeholder = dotted(straight, false);
+      lines.push(placeholder);
+      estimatedRoad(a, b).then((road) => {
+        if (cancelled || !road) return;
+        placeholder.setMap(null);
+        lines.push(dotted(road, true));
+      });
+    });
+    return () => {
+      cancelled = true;
+      lines.forEach((l) => l.setMap(null));
+    };
   }, [map, routes, gapLines]);
   return null;
 }

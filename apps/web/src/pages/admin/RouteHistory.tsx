@@ -168,7 +168,7 @@ export function RouteHistory({ points, visits, events, tz, fitKey, liveMarker, s
           </div>
           <p className="route-legend small">
             <span><i className="lg-line" /> Recorded route (arrows show direction)</span>
-            <span><i className="lg-gap" /> No GPS data, actual road not known</span>
+            <span><i className="lg-gap" /> No GPS data: likely road (estimated by Google, not recorded)</span>
             <span><i className="lg-dot lg-start" /> Start</span>
             <span><i className="lg-dot lg-end" /> Last point</span>
             <span><i className="lg-dot lg-stop" /> Stopped 5+ min</span>

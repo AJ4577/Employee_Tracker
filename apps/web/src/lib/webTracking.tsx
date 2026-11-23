@@ -9,7 +9,7 @@ import { rpc, ApiError } from "./api";
  * when the tab is closed, the screen locks or another app is in front. Nothing is invented when
  * no fix arrives; the admin map then shows Stale / Last known.
  */
-export type WebTrackState = "off" | "waiting" | "on" | "denied" | "unsupported" | "error";
+export type WebTrackState = "off" | "waiting" | "on" | "denied" | "unsupported" | "error" | "other_tab";
 
 export interface WebTrackStatus {
   state: WebTrackState;
@@ -48,6 +48,8 @@ export function WebTrackerProvider({ children }: { children: ReactNode }) {
       setStatus((s) => ({ ...s, state: "unsupported" }));
       return;
     }
+    // Only one browser tab may track at a time (two tabs produced duplicate points).
+    const run = (): (() => void) => {
     setStatus((s) => ({ ...s, state: "waiting" }));
     const queue: Pt[] = [];
     let last: { lat: number; lon: number; t: number } | null = null;
@@ -117,6 +119,28 @@ export function WebTrackerProvider({ children }: { children: ReactNode }) {
       stopped = true;
       lock?.release().catch(() => {});
     };
+    };
+
+    const locks = (navigator as Navigator & { locks?: { request: (name: string, opts: { signal: AbortSignal }, cb: () => Promise<void>) => Promise<void> } }).locks;
+    const ctrl = new AbortController();
+    let stop: (() => void) | null = null;
+    let release: (() => void) | null = null;
+    if (locks?.request) {
+      setStatus((s) => ({ ...s, state: "other_tab" }));
+      locks
+        .request("kisanroute-location-tracker", { signal: ctrl.signal }, () =>
+          new Promise<void>((res) => {
+            release = res;
+            stop = run();
+          }),
+        )
+        .catch(() => {});
+    } else stop = run();
+    return () => {
+      ctrl.abort();
+      stop?.();
+      release?.();
+    };
   }, [active, settings.sample_interval_s, settings.sample_distance_m, refreshMe]);
 
   return (
@@ -131,7 +155,9 @@ export function WebTrackerProvider({ children }: { children: ReactNode }) {
               ? "Getting your location…"
               : status.state === "denied"
                 ? "Location permission denied"
-                : "Location unavailable"}
+                : status.state === "other_tab"
+                  ? "Location is being shared from another KisanRoute tab"
+                  : "Location unavailable"}
         </div>
       ) : null}
     </Ctx.Provider>
