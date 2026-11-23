@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { analyzeRoute, distanceMeters, EVENT_LABEL, formatDistance, formatHm, formatInTz, frameAt, type FeedItem, type TrackPoint } from "@kisanroute/shared";
+import { analyzeRoute, distanceMeters, EVENT_LABEL, formatDistance, formatHm, formatInTz, frameAt, TRAVEL_MODE_ICON, type FeedItem, type TrackPoint, type TravelMode } from "@kisanroute/shared";
+import { estimatedRoad, hasGoogleMaps } from "../../map/GoogleMapView";
 import { MapView, type MapMarker } from "../../map/MapView";
 import { Button, Empty } from "../../ui/ui";
 
@@ -20,6 +21,15 @@ interface Props {
   /** Live marker (latest position) to show when not playing. */
   liveMarker?: MapMarker | null;
   segments: [number, number][][];
+  /** Travel mode chosen by staff for each trip (walk / bike / car). */
+  tripModes?: Record<string, TravelMode | null>;
+}
+
+interface GapInfo {
+  a: [number, number];
+  b: [number, number];
+  from: number;
+  to: number;
 }
 
 type TimelineItem =
@@ -30,7 +40,7 @@ type TimelineItem =
 const SPEEDS = [10, 30, 60, 120, 300];
 
 /** Route summary, "where and how long" stops, visit timeline and playback of recorded GPS points. */
-export function RouteHistory({ points, visits, events, tz, fitKey, liveMarker, segments }: Props) {
+export function RouteHistory({ points, visits, events, tz, fitKey, liveMarker, segments, tripModes = {} }: Props) {
   const analysis = useMemo(() => analyzeRoute(points), [points]);
   const t0 = analysis.start ?? 0;
   const t1 = analysis.end ?? 0;
@@ -90,19 +100,79 @@ export function RouteHistory({ points, visits, events, tz, fitKey, liveMarker, s
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [analysis, events, visits]);
 
-  const frame = points.length ? frameAt(points, t) : null;
-  const showVehicle = points.length > 0 && (playing || t > t0);
-
-  // Dotted connectors between recorded stretches (data gaps / trip changes); not a travelled road.
-  const gapLines = useMemo(() => {
-    const out: [number, number][][] = [];
-    for (let i = 1; i < segments.length; i++) {
-      const a = segments[i - 1]!.at(-1);
-      const b = segments[i]![0];
-      if (a && b) out.push([a, b]);
+  // Data gaps with their end points (last fix before, first fix after).
+  const gaps: GapInfo[] = useMemo(() => {
+    const out: GapInfo[] = [];
+    for (let i = 1; i < points.length; i++) {
+      const p = points[i - 1]!;
+      const q = points[i]!;
+      if (q.t - p.t > 300_000) out.push({ a: [p.lat, p.lon], b: [q.lat, q.lon], from: p.t, to: q.t });
     }
     return out;
-  }, [segments]);
+  }, [points]);
+
+  // Likely roads for gaps from Google (estimated, never treated as recorded). Index -> path.
+  const [roads, setRoads] = useState<Record<number, [number, number][]>>({});
+  useEffect(() => {
+    setRoads({});
+    if (!hasGoogleMaps || !gaps.length) return;
+    let cancelled = false;
+    let tries = 0;
+    const run = () => {
+      const g = (window as unknown as { google?: { maps?: { importLibrary?: unknown } } }).google;
+      if (!g?.maps?.importLibrary) {
+        if (tries++ < 40 && !cancelled) setTimeout(run, 500); // wait for the Maps script
+        return;
+      }
+      gaps.slice(0, 25).forEach((gp, i) => {
+        if (distanceMeters({ lat: gp.a[0], lon: gp.a[1] }, { lat: gp.b[0], lon: gp.b[1] }) <= 150) return;
+        estimatedRoad(gp.a, gp.b).then((path) => {
+          if (!cancelled && path?.length) setRoads((r) => ({ ...r, [i]: path.map((x) => [x.lat, x.lng] as [number, number]) }));
+        });
+      });
+    };
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [gaps]);
+
+  const estimatedRoutes = useMemo(() => Object.values(roads), [roads]);
+  // Straight dotted connectors only where no road estimate exists.
+  const gapLines = useMemo(() => gaps.filter((_, i) => !roads[i]).map((gp) => [gp.a, gp.b]), [gaps, roads]);
+
+  // Playback position: real points, or — inside a gap with a road estimate — along that road.
+  const frame = useMemo(() => {
+    if (!points.length) return null;
+    const base = frameAt(points, t);
+    const gi = gaps.findIndex((gp) => t > gp.from && t < gp.to);
+    const road = gi >= 0 ? roads[gi] : undefined;
+    if (!base || !road || road.length < 2) return base ? { ...base, estimated: false } : null;
+    const gp = gaps[gi]!;
+    const cum = [0];
+    for (let k = 1; k < road.length; k++) cum.push(cum[k - 1]! + distanceMeters({ lat: road[k - 1]![0], lon: road[k - 1]![1] }, { lat: road[k]![0], lon: road[k]![1] }));
+    const total = cum.at(-1)! || 1;
+    const target = ((t - gp.from) / (gp.to - gp.from)) * total;
+    let k = 1;
+    while (k < road.length - 1 && cum[k]! < target) k++;
+    const seg = cum[k]! - cum[k - 1]! || 1;
+    const f = Math.min(1, Math.max(0, (target - cum[k - 1]!) / seg));
+    const lat = road[k - 1]![0] + (road[k]![0] - road[k - 1]![0]) * f;
+    const lon = road[k - 1]![1] + (road[k]![1] - road[k - 1]![1]) * f;
+    return { ...base, lat, lon, estimated: true };
+  }, [points, t, gaps, roads]);
+  const showVehicle = points.length > 0 && (playing || t > t0);
+
+  // Vehicle icon from the trip's travel mode (last real point at or before the playback time).
+  const vehicleKind = useMemo((): "walk" | "bike" | "car" => {
+    let trip: string | null = null;
+    for (const p of points) {
+      if (p.t > t) break;
+      if (p.trip_id) trip = p.trip_id;
+    }
+    const m = (trip && tripModes[trip]) || Object.values(tripModes).find(Boolean) || null;
+    return m ?? "bike";
+  }, [points, t, tripModes]);
   const first = points[0];
   const lastPt = points.at(-1);
   const clock = (ms: number) => formatInTz(new Date(ms).toISOString(), tz, { day: undefined, month: undefined, second: "2-digit" });
@@ -129,7 +199,7 @@ export function RouteHistory({ points, visits, events, tz, fitKey, liveMarker, s
         </div>
       ),
     })),
-    ...(showVehicle && frame ? [{ id: "vehicle", lat: frame.lat, lon: frame.lon, label: "Staff (playback)", kind: "vehicle" as const }] : liveMarker ? [liveMarker] : []),
+    ...(showVehicle && frame ? [{ id: "vehicle", lat: frame.lat, lon: frame.lon, label: `Staff (${vehicleKind})${frame.estimated ? " — estimated position" : ""}`, kind: vehicleKind }] : liveMarker ? [liveMarker] : []),
   ];
 
   if (!points.length) {
@@ -150,7 +220,7 @@ export function RouteHistory({ points, visits, events, tz, fitKey, liveMarker, s
 
       <div className="route-body">
         <div className="route-map">
-          <MapView markers={markers} routes={segments} gapLines={gapLines} height={480} title="Route playback map" fitKey={fitKey} />
+          <MapView markers={markers} routes={segments} gapLines={gapLines} estimatedRoutes={estimatedRoutes} height={480} title="Route playback map" fitKey={fitKey} />
           <div className="playback" aria-label="Route playback">
             <Button className="btn-sm" onClick={() => { if (t >= t1) setT(t0); setPlaying((p) => !p); }} aria-label={playing ? "Pause" : "Play"}>
               {playing ? "⏸ Pause" : "▶ Play"}
@@ -162,13 +232,16 @@ export function RouteHistory({ points, visits, events, tz, fitKey, liveMarker, s
             <input type="range" aria-label="Playback position" min={t0} max={t1} step={1000} value={Math.round(t)} onChange={(e) => { setPlaying(false); setT(Number(e.target.value)); }} />
             <div className="playback-readout">
               <strong>{time(t)}</strong>
-              <span>{frame?.inGap ? "no data (gap)" : frame?.speed_kmh !== null && frame?.speed_kmh !== undefined ? `${frame.speed_kmh} km/h` : "—"}</span>
+              <span>{frame?.estimated ? "estimated road" : frame?.inGap ? "no data (gap)" : frame?.speed_kmh !== null && frame?.speed_kmh !== undefined ? `${frame.speed_kmh} km/h` : "—"}</span>
+              <span aria-label="Travel mode">{TRAVEL_MODE_ICON[vehicleKind]}</span>
               <span>{formatDistance(frame?.travelled_m ?? 0)}</span>
             </div>
           </div>
           <p className="route-legend small">
             <span><i className="lg-line" /> Recorded route (arrows show direction)</span>
-            <span><i className="lg-gap" /> No GPS data: likely road (estimated by Google, not recorded)</span>
+            <span><i className="lg-est" /> No GPS data: likely road (estimated by Google, not recorded)</span>
+            <span><i className="lg-gap" /> No GPS data, no road estimate</span>
+            <span>🚶 / 🏍️ / 🚗 travel mode chosen by staff</span>
             <span><i className="lg-dot lg-start" /> Start</span>
             <span><i className="lg-dot lg-end" /> Last point</span>
             <span><i className="lg-dot lg-stop" /> Stopped 5+ min</span>

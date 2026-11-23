@@ -23,6 +23,7 @@ import { Banner, Button, ErrorState, KV, Loading, Modal, PageHeader, StatusBadge
 import { MapView } from "../../map/MapView";
 
 type Action = "start" | "arrive" | "return" | "end_return";
+type Mode = "walk" | "bike" | "car";
 
 export default function StaffVisit() {
   const { id } = useParams();
@@ -33,14 +34,15 @@ export default function StaffVisit() {
   const [pending, setPending] = useState<{ action: Action; key: string; fix: DeviceFix | null; detail?: Record<string, unknown> } | null>(null);
   const [reason, setReason] = useState("");
   const [completing, setCompleting] = useState(false);
+  const [askMode, setAskMode] = useState<null | "start" | "return">(null);
   const q = useQuery({ queryKey: ["my-visit", id], queryFn: () => rpc<MyVisitDetail>("my_visit_detail", { p_visit: id }) });
 
   const run = useMutation({
-    mutationFn: async ({ action, key, fix, overrideReason }: { action: Action; key: string; fix: DeviceFix | null; overrideReason?: string }) => {
+    mutationFn: async ({ action, key, fix, overrideReason, mode }: { action: Action; key: string; fix: DeviceFix | null; overrideReason?: string; mode?: Mode }) => {
       const geo = { p_lat: fix?.lat ?? null, p_lon: fix?.lon ?? null, p_accuracy_m: fix?.accuracy_m ?? null, p_device_time: fix?.device_time ?? new Date().toISOString() };
-      if (action === "start") return rpc("staff_start_visit", { p_visit: id, p_idempotency_key: key, ...geo });
+      if (action === "start") return rpc("staff_start_visit", { p_visit: id, p_idempotency_key: key, ...geo, p_travel_mode: mode ?? null });
       if (action === "arrive") return rpc("staff_arrive_visit", { p_visit: id, p_idempotency_key: key, ...geo, p_override_reason: overrideReason ?? null });
-      if (action === "return") return rpc("staff_start_return", { p_visit: id, p_idempotency_key: key, ...geo });
+      if (action === "return") return rpc("staff_start_return", { p_visit: id, p_idempotency_key: key, ...geo, p_travel_mode: mode ?? null });
       const trip = q.data!.trips.find((t) => t.leg === "return" && t.status === "active");
       return rpc("staff_end_trip", { p_trip: trip!.id, p_idempotency_key: key, ...geo });
     },
@@ -58,7 +60,7 @@ export default function StaffVisit() {
     },
   });
 
-  const act = async (action: Action) => {
+  const act = async (action: Action, mode?: Mode) => {
     const fix = await getBrowserFix();
     if (action === "start" && !me?.duty) {
       try {
@@ -70,7 +72,7 @@ export default function StaffVisit() {
       }
     }
     if (!fix && action === "arrive") toast("info", "Location unavailable — you'll be asked for a reason.");
-    run.mutate({ action, key: newIdempotencyKey(), fix });
+    run.mutate({ action, key: newIdempotencyKey(), fix, mode });
   };
 
   if (q.isLoading) return <Loading />;
@@ -95,10 +97,10 @@ export default function StaffVisit() {
         ) : addr ? (
           <a className="btn btn-secondary" href={googleDirectionsToAddressUrl(addr)} target="_blank" rel="noopener noreferrer" title="No farm pin yet — Google will route to its best match for the address">🧭 Directions (by address)</a>
         ) : null}
-        {["assigned", "rescheduled"].includes(v.status) ? <Button onClick={() => act("start")} busy={busy}>Start trip</Button> : null}
+        {["assigned", "rescheduled"].includes(v.status) ? <Button onClick={() => setAskMode("start")} busy={busy}>Start trip</Button> : null}
         {v.status === "in_progress" ? <Button onClick={() => act("arrive")} busy={busy}>Mark arrived</Button> : null}
         {v.status === "arrived" ? <Button onClick={() => setCompleting(true)}>Complete meeting</Button> : null}
-        {v.status === "completed" && !returnTrip ? <Button variant="secondary" onClick={() => act("return")} busy={busy}>Start return trip</Button> : null}
+        {v.status === "completed" && !returnTrip ? <Button variant="secondary" onClick={() => setAskMode("return")} busy={busy}>Start return trip</Button> : null}
         {returnTrip?.status === "active" ? <Button onClick={() => act("end_return")} busy={busy}>I'm back (end return)</Button> : null}
       </div>
 
@@ -162,6 +164,19 @@ export default function StaffVisit() {
             Add a short reason. Your admin will see it.
           </p>
           <TextArea label="Reason" required value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Met farmer at village market" />
+        </Modal>
+      ) : null}
+      {askMode ? (
+        <Modal title={askMode === "start" ? "How are you travelling?" : "How are you coming back?"} open onClose={() => setAskMode(null)}>
+          <div className="mode-choices">
+            {(["walk", "bike", "car"] as Mode[]).map((m) => (
+              <button key={m} type="button" className="mode-choice" onClick={() => { const a = askMode; setAskMode(null); act(a, m); }}>
+                <span aria-hidden className="mode-emoji">{m === "walk" ? "🚶" : m === "bike" ? "🏍️" : "🚗"}</span>
+                <span>{m === "walk" ? "Walking" : m === "bike" ? "Bike" : "Car"}</span>
+              </button>
+            ))}
+          </div>
+          <p className="small muted">Your admin sees this icon on the map for this trip.</p>
         </Modal>
       ) : null}
       {completing ? <CompleteForm d={d} onClose={() => setCompleting(false)} /> : null}

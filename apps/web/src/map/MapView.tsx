@@ -16,7 +16,9 @@ const DEFAULT_CENTER: [number, number] = [20.5937, 78.9629]; // India
 const icon = (kind: MapMarker["kind"], label: string, badge?: string) =>
   L.divIcon({
     className: "",
-    html: `<div class="pin pin-${kind}" aria-label="${label.replace(/[<>"&]/g, "")}">${badge ? `<span class="pin-badge">${badge.replace(/[<>"&]/g, "")}</span>` : ""}</div>`,
+    html: ({ walk: "🚶", bike: "🏍️", car: "🚗" } as Record<string, string>)[kind]
+      ? `<div class="pin-vehicle-emoji" aria-label="${label.replace(/[<>"&]/g, "")}">${({ walk: "🚶", bike: "🏍️", car: "🚗" } as Record<string, string>)[kind]}</div>`
+      : `<div class="pin pin-${kind}" aria-label="${label.replace(/[<>"&]/g, "")}">${badge ? `<span class="pin-badge">${badge.replace(/[<>"&]/g, "")}</span>` : ""}</div>`,
     iconSize: [26, 26],
     iconAnchor: [13, 26],
     popupAnchor: [0, -24],
@@ -66,7 +68,7 @@ export function MapView(props: MapProps) {
   return hasGoogleMaps ? <GoogleMapView {...props} /> : <LeafletMapView {...props} />;
 }
 
-function LeafletMapView({ markers = [], routes, center, zoom, height = 360, onPick, localSearch, searchable = true, title = "Map", legend, fitKey, gapLines }: MapProps) {
+function LeafletMapView({ markers = [], routes, center, zoom, height = 360, onPick, localSearch, searchable = true, title = "Map", legend, fitKey, gapLines, estimatedRoutes }: MapProps) {
   const { settings } = useAuth();
   const [full, setFull] = useState(false);
   const [searchPin, setSearchPin] = useState<LocalSearchResult | null>(null);
@@ -101,6 +103,9 @@ function LeafletMapView({ markers = [], routes, center, zoom, height = 360, onPi
         <PickHandler onPick={onPick} />
         {(routes ?? []).filter((r) => r.length > 1).map((r, i) => (
           <Polyline key={`r${i}`} positions={r as LatLngExpression[]} pathOptions={{ color: "#1a73e8", weight: 6, opacity: 0.95 }} />
+        ))}
+        {(estimatedRoutes ?? []).filter((r) => r.length > 1).map((r, i) => (
+          <Polyline key={`e${i}`} positions={r as LatLngExpression[]} pathOptions={{ color: "#1a73e8", weight: 5, opacity: 0.4 }} />
         ))}
         {(gapLines ?? []).map((gl, i) => (
           <Polyline key={`g${i}`} positions={gl as LatLngExpression[]} pathOptions={{ color: "#6b7280", weight: 3, opacity: 0.85, dashArray: "4 8" }} />

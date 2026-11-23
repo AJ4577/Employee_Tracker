@@ -144,6 +144,7 @@ export default function Tracking() {
                 fitKey={`${staffId}|${date}|${tripId}|${visitId}|${trackPoints.length > 0}`}
                 liveMarker={liveMarker}
                 segments={segments}
+                tripModes={Object.fromEntries(trips.map((tr) => [tr.id, tr.travel_mode ?? null]))}
               />
             )}
             {route.data?.flagged_count ? <p className="small muted">{route.data.flagged_count} implausible or drifted point(s) were hidden.</p> : null}

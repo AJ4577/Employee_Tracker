@@ -34,7 +34,12 @@ export interface Trip {
   started_at: string;
   ended_at: string | null;
   last_sequence: number;
+  travel_mode?: TravelMode | null;
 }
+
+export type TravelMode = "walk" | "bike" | "car";
+export const TRAVEL_MODE_LABEL: Record<TravelMode, string> = { walk: "Walking", bike: "Bike", car: "Car" };
+export const TRAVEL_MODE_ICON: Record<TravelMode, string> = { walk: "🚶", bike: "🏍️", car: "🚗" };
 
 export interface Me {
   profile: Profile;
@@ -238,7 +243,7 @@ export type RoutePoint = [number, number, number, string, string | null, Locatio
 export interface StaffRoute {
   points: RoutePoint[];
   flagged_count: number;
-  trips: { id: string; visit_id: string; leg: TripLeg; status: string; started_at: string; ended_at: string | null; farmer_name: string }[];
+  trips: { id: string; visit_id: string; leg: TripLeg; status: string; started_at: string; ended_at: string | null; farmer_name: string; travel_mode: TravelMode | null }[];
   duty: { started_at: string; ended_at: string | null; mode: string }[];
 }
 

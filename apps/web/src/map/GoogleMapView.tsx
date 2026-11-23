@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { APIProvider, InfoWindow, Map, Marker, useApiIsLoaded, useMap, useMapsLibrary } from "@vis.gl/react-google-maps";
 import { useDebounced } from "../lib/hooks";
-import { distanceMeters } from "@kisanroute/shared";
 import type { LocalSearchResult, MapMarker, MapProps } from "./types";
 
 const KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
@@ -22,9 +21,23 @@ const COLORS: Record<MapMarker["kind"], string> = {
   vehicle: "#111827",
   start: "#16a34a",
   end: "#dc2626",
+  walk: "#1a73e8",
+  bike: "#1a73e8",
+  car: "#1a73e8",
 };
 
+const VEHICLE_EMOJI: Partial<Record<MapMarker["kind"], string>> = { walk: "🚶", bike: "🏍️", car: "🚗" };
+
 function pinIcon(kind: MapMarker["kind"]): google.maps.Icon {
+  if (VEHICLE_EMOJI[kind]) {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><circle cx="20" cy="20" r="17" fill="#ffffff" stroke="#1a73e8" stroke-width="3"/></svg>`;
+    return {
+      url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+      scaledSize: new google.maps.Size(40, 40),
+      anchor: new google.maps.Point(20, 20),
+      labelOrigin: new google.maps.Point(20, 21),
+    };
+  }
   const c = COLORS[kind];
   const round = kind.startsWith("staff") || kind === "me" || kind === "stop" || kind === "vehicle" || kind === "start" || kind === "end";
   const svg = round
@@ -47,8 +60,8 @@ function PinMarker({ m, onClick }: { m: MapMarker; onClick: () => void }) {
       position={{ lat: m.lat, lng: m.lon }}
       title={m.label}
       icon={pinIcon(m.kind)}
-      label={m.badge ? { text: m.badge, color: "#fff", fontWeight: "700", fontSize: "11px" } : undefined}
-      zIndex={m.kind === "vehicle" ? 1000 : undefined}
+      label={VEHICLE_EMOJI[m.kind] ? { text: VEHICLE_EMOJI[m.kind]!, fontSize: "20px" } : m.badge ? { text: m.badge, color: "#fff", fontWeight: "700", fontSize: "11px" } : undefined}
+      zIndex={VEHICLE_EMOJI[m.kind] || m.kind === "vehicle" ? 1000 : undefined}
       onClick={onClick}
     />
   );
@@ -83,9 +96,8 @@ function FitTo({ markers, routes, center, zoom, fitKey }: Pick<MapProps, "marker
 /** Recorded GPS trail: one polyline per segment, never joined across gaps. */
 // Estimated road paths for data gaps, cached per endpoint pair (Routes API calls are billed).
 const gapRouteCache = new globalThis.Map<string, google.maps.LatLngLiteral[] | null>();
-const MAX_GAP_ROUTES = 25;
 
-async function estimatedRoad(a: [number, number], b: [number, number]): Promise<google.maps.LatLngLiteral[] | null> {
+export async function estimatedRoad(a: [number, number], b: [number, number]): Promise<google.maps.LatLngLiteral[] | null> {
   const key = `${a[0].toFixed(5)},${a[1].toFixed(5)}>${b[0].toFixed(5)},${b[1].toFixed(5)}`;
   if (gapRouteCache.has(key)) return gapRouteCache.get(key)!;
   let path: google.maps.LatLngLiteral[] | null = null;
@@ -101,7 +113,7 @@ async function estimatedRoad(a: [number, number], b: [number, number]): Promise<
   return path;
 }
 
-function Routes({ routes, gapLines }: { routes?: [number, number][][]; gapLines?: [number, number][][] }) {
+function Routes({ routes, gapLines, estimatedRoutes }: { routes?: [number, number][][]; gapLines?: [number, number][][]; estimatedRoutes?: [number, number][][] }) {
   const map = useMap();
   useEffect(() => {
     if (!map) return;
@@ -124,38 +136,35 @@ function Routes({ routes, gapLines }: { routes?: [number, number][][]; gapLines?
         }),
       );
     }
-    let cancelled = false;
-    const dotted = (path: google.maps.LatLngLiteral[], estimated: boolean) =>
-      new google.maps.Polyline({
-        map,
-        path,
-        strokeOpacity: 0,
-        zIndex: 1,
-        clickable: false,
-        icons: [{ icon: { path: "M 0,-1 0,1", strokeOpacity: estimated ? 0.75 : 0.85, strokeColor: estimated ? "#9ca3af" : "#6b7280", scale: 3 }, offset: "0", repeat: estimated ? "12px" : "14px" }],
-      });
-    (gapLines ?? []).forEach((gl, i) => {
-      const a = gl[0]!;
-      const b = gl[gl.length - 1]!;
-      const straight = gl.map(([lat, lng]) => ({ lat, lng }));
-      if (i >= MAX_GAP_ROUTES || distanceMeters({ lat: a[0], lon: a[1] }, { lat: b[0], lon: b[1] }) <= 150) {
-        lines.push(dotted(straight, false));
-        return;
-      }
-      // Show the straight connector until the estimated road arrives, then swap it.
-      const placeholder = dotted(straight, false);
-      lines.push(placeholder);
-      estimatedRoad(a, b).then((road) => {
-        if (cancelled || !road) return;
-        placeholder.setMap(null);
-        lines.push(dotted(road, true));
-      });
-    });
-    return () => {
-      cancelled = true;
-      lines.forEach((l) => l.setMap(null));
-    };
-  }, [map, routes, gapLines]);
+    for (const r of estimatedRoutes ?? []) {
+      if (r.length < 2) continue;
+      lines.push(
+        new google.maps.Polyline({
+          map,
+          path: r.map(([lat, lng]) => ({ lat, lng })),
+          strokeColor: "#1a73e8",
+          strokeOpacity: 0.4,
+          strokeWeight: 5,
+          zIndex: 1,
+          clickable: false,
+          icons: [{ icon: { path: google.maps.SymbolPath.FORWARD_OPEN_ARROW, scale: 2, strokeColor: "#ffffff", strokeOpacity: 0.9, strokeWeight: 2 }, offset: "50px", repeat: "120px" }],
+        }),
+      );
+    }
+    for (const gl of gapLines ?? []) {
+      lines.push(
+        new google.maps.Polyline({
+          map,
+          path: gl.map(([lat, lng]) => ({ lat, lng })),
+          strokeOpacity: 0,
+          zIndex: 1,
+          clickable: false,
+          icons: [{ icon: { path: "M 0,-1 0,1", strokeOpacity: 0.85, strokeColor: "#6b7280", scale: 3 }, offset: "0", repeat: "14px" }],
+        }),
+      );
+    }
+    return () => lines.forEach((l) => l.setMap(null));
+  }, [map, routes, gapLines, estimatedRoutes]);
   return null;
 }
 
@@ -254,7 +263,7 @@ function GoogleSearch({ localSearch, onSelect }: { localSearch?: (q: string) => 
   );
 }
 
-export function GoogleMapView({ markers = [], routes, center, zoom, height = 360, onPick, localSearch, searchable = true, title = "Map", legend, fitKey, gapLines }: MapProps) {
+export function GoogleMapView({ markers = [], routes, center, zoom, height = 360, onPick, localSearch, searchable = true, title = "Map", legend, fitKey, gapLines, estimatedRoutes }: MapProps) {
   const [full, setFull] = useState(false);
   const [searchPin, setSearchPin] = useState<LocalSearchResult | null>(null);
   const [openInfo, setOpenInfo] = useState<string | null>(null);
@@ -302,7 +311,7 @@ export function GoogleMapView({ markers = [], routes, center, zoom, height = 360
         >
           <FitTo markers={markers} routes={routes} center={center} zoom={zoom} fitKey={fitKey} />
           <Recenter to={searchPin} />
-          <Routes routes={routes} gapLines={gapLines} />
+          <Routes routes={routes} gapLines={gapLines} estimatedRoutes={estimatedRoutes} />
           <AccuracyCircles markers={all} />
           {all.map((m) => (
             <PinMarker key={m.id} m={m} onClick={() => setOpenInfo(m.id)} />

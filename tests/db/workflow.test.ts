@@ -145,6 +145,17 @@ describe("full visit lifecycle", () => {
   });
 });
 
+test("travel mode is stored per trip and returned in staff_route; invalid modes rejected", async () => {
+  await staff(w.neha, (tx) => rpc(tx, `public.start_duty('tracking')`));
+  const id = await newVisit(w.neha);
+  await expectError(staff(w.neha, (tx) => rpc(tx, `public.staff_start_visit(p_visit => $1, p_idempotency_key => $2, p_travel_mode => 'plane')`, [id, uuid()])), "validation");
+  const r = await staff(w.neha, (tx) => rpc(tx, `public.staff_start_visit(p_visit => $1, p_idempotency_key => $2, p_travel_mode => 'bike')`, [id, uuid()]));
+  expect(r.trip.travel_mode).toBe("bike");
+  const route = await as(db, admin(w.adminA), (tx) => rpc(tx, `public.staff_route($1, now() - interval '1 day', now() + interval '1 day')`, [w.neha]));
+  expect(route.trips.find((t: any) => t.visit_id === id).travel_mode).toBe("bike");
+  await staff(w.neha, (tx) => rpc(tx, `public.end_duty()`));
+});
+
 test("confirming a farmer pin updates visits already on the way", async () => {
   await staff(w.amit, (tx) => rpc(tx, `public.start_duty('tracking')`));
   const id = await newVisit(w.amit, w.farmerA2); // farmer A2 has no pin
