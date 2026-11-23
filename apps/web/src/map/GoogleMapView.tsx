@@ -103,30 +103,51 @@ function Recenter({ to }: { to: LocalSearchResult | null }) {
 }
 
 function GoogleSearch({ localSearch, onSelect }: { localSearch?: (q: string) => LocalSearchResult[]; onSelect: (r: LocalSearchResult | null) => void }) {
-  const geocoding = useMapsLibrary("geocoding");
+  // Places API (New) text search: finds villages, landmarks and addresses; biased to the current map view.
+  const places = useMapsLibrary("places");
+  const map = useMap();
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [remote, setRemote] = useState<LocalSearchResult[]>([]);
   const [msg, setMsg] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
   const dq = useDebounced(q, 450);
   const local = useMemo(() => (localSearch && q.trim().length >= 2 ? localSearch(q.trim()).slice(0, 6) : []), [q, localSearch]);
 
   useEffect(() => {
     setRemote([]);
     setMsg(null);
-    if (!geocoding || dq.trim().length < 3) return;
+    if (!places || dq.trim().length < 3) return;
     let cancelled = false;
-    new geocoding.Geocoder()
-      .geocode({ address: dq.trim(), region: "IN" })
-      .then((r) => {
+    setBusy(true);
+    const bounds = map?.getBounds();
+    places.Place.searchByText({
+      textQuery: dq.trim(),
+      fields: ["displayName", "formattedAddress", "location"],
+      region: "in",
+      maxResultCount: 6,
+      ...(bounds ? { locationBias: bounds } : {}),
+    })
+      .then(({ places: found }) => {
         if (cancelled) return;
-        setRemote(r.results.slice(0, 6).map((x, i) => ({ id: `g${i}`, label: x.formatted_address, sub: "Google result — approximate until confirmed", lat: x.geometry.location.lat(), lon: x.geometry.location.lng() })));
+        const rows = found
+          .filter((x) => x.location)
+          .map((x, i) => ({
+            id: `p${i}`,
+            label: x.displayName ?? x.formattedAddress ?? "Place",
+            sub: `${x.formattedAddress ?? ""} — approximate until you confirm the pin`,
+            lat: x.location!.lat(),
+            lon: x.location!.lng(),
+          }));
+        setRemote(rows);
+        if (!rows.length) setMsg("No places found. Try the village or taluka name.");
       })
-      .catch((e: { code?: string }) => !cancelled && setMsg(e?.code === "ZERO_RESULTS" ? "No places found." : "Place search unavailable (enable Geocoding API for the key)."));
+      .catch(() => !cancelled && setMsg("Place search is unavailable right now (check Places API on the Google key)."))
+      .finally(() => !cancelled && setBusy(false));
     return () => {
       cancelled = true;
     };
-  }, [dq, geocoding]);
+  }, [dq, places, map]);
 
   const results = [...local, ...remote];
   return (
@@ -134,6 +155,7 @@ function GoogleSearch({ localSearch, onSelect }: { localSearch?: (q: string) => 
       <input type="search" placeholder="Search village, place or farmer" aria-label="Search place or farmer on map" value={q} onChange={(e) => { setQ(e.target.value); setOpen(true); }} onFocus={() => setOpen(true)} />
       {open && q.trim().length >= 2 ? (
         <ul className="map-results" role="listbox">
+          {busy ? <li className="muted">Searching…</li> : null}
           {results.map((r) => (
             <li key={r.id}>
               <button role="option" aria-selected={false} onClick={() => { onSelect(r); setOpen(false); }}>
