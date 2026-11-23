@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { APIProvider, InfoWindow, Map, Marker, useMap, useMapsLibrary } from "@vis.gl/react-google-maps";
+import { APIProvider, InfoWindow, Map, Marker, useApiIsLoaded, useMap, useMapsLibrary } from "@vis.gl/react-google-maps";
 import { useDebounced } from "../lib/hooks";
 import type { LocalSearchResult, MapMarker, MapProps } from "./types";
 
@@ -30,6 +30,13 @@ function pinIcon(kind: MapMarker["kind"]): google.maps.Icon {
     scaledSize: round ? new google.maps.Size(26, 26) : new google.maps.Size(28, 38),
     anchor: round ? new google.maps.Point(13, 13) : new google.maps.Point(14, 37),
   };
+}
+
+/** google.maps.* exists only after the Maps script loads; never build icons before that. */
+function PinMarker({ m, onClick }: { m: MapMarker; onClick: () => void }) {
+  const loaded = useApiIsLoaded();
+  if (!loaded || typeof google === "undefined") return null;
+  return <Marker position={{ lat: m.lat, lng: m.lon }} title={m.label} icon={pinIcon(m.kind)} onClick={onClick} />;
 }
 
 /** Fit to markers/routes, or center on a given point. Re-runs only when the content actually changes. */
@@ -225,7 +232,7 @@ export function GoogleMapView({ markers = [], routes, center, zoom, height = 360
           <Routes routes={routes} />
           <AccuracyCircles markers={all} />
           {all.map((m) => (
-            <Marker key={m.id} position={{ lat: m.lat, lng: m.lon }} title={m.label} icon={pinIcon(m.kind)} onClick={() => setOpenInfo(m.id)} />
+            <PinMarker key={m.id} m={m} onClick={() => setOpenInfo(m.id)} />
           ))}
           {info ? (
             <InfoWindow position={{ lat: info.lat, lng: info.lon }} pixelOffset={[0, -30]} onCloseClick={() => setOpenInfo(null)}>

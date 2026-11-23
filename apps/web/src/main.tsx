@@ -7,6 +7,7 @@ import { AuthProvider } from "./lib/auth";
 import { configError } from "./lib/supabase";
 import { ToastProvider } from "./ui/toast";
 import { App } from "./App";
+import { ErrorBoundary } from "./ui/ErrorBoundary";
 import "./styles.css";
 
 const qc = new QueryClient({
@@ -38,7 +39,9 @@ if (configError) {
         <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, "") || undefined}>
           <AuthProvider>
             <ToastProvider>
-              <App />
+              <ErrorBoundary>
+                <App />
+              </ErrorBoundary>
             </ToastProvider>
           </AuthProvider>
         </BrowserRouter>
